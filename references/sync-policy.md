@@ -1,0 +1,34 @@
+# sync-policy
+
+## Why default is `copy`
+
+`refs/` under `$DEPS_DIR` must be usable on any host that only mounts **zzbnew**.
+
+`symlink` points into `--asset-source` (usually on **zjl-bgi-zzb**). That fails when:
+
+- the run host does not mount zjl
+- the path exists but ACL/permissions deny the pipeline user
+- the mount is stale / read-only for that UID
+
+Therefore:
+
+1. **Install / one-shot default**: `--sync-mode copy`
+2. **symlink allowed** only for quick lab experiments when both disks are always mounted and readable
+3. **Installer checks**: source and resulting paths must pass a read probe (`list` + `head -c 1` on a sample file); otherwise abort with `ASSET_UNREADABLE` / `SYMLINK_UNREADABLE`
+
+## Migrating an old symlink install
+
+```bash
+bash scripts/install.sh --mode sync --yes --sync-mode copy --force-resync
+bash scripts/install.sh --mode verify
+```
+
+This removes external symlinks under `refs/` / `licenses/` / `tools/neodata_tools` and rsyncs real trees into `$DEPS_DIR`.
+
+## Install-time vs run-time mounts
+
+| Phase | zzbnew | zjl (asset-source) |
+|-------|--------|--------------------|
+| First install (copy) | required (write) | required (**readable**) |
+| Later run / verify | required | not required if copy completed |
+| symlink mode run | required | **still required readable** |

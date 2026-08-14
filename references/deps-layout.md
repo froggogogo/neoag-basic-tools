@@ -1,0 +1,22 @@
+# deps-layout
+
+Canonical tree under `--deps-dir` (default
+`/mnt/zzbnew/peixunban/gl/neoag_basic_deps`):
+
+```text
+refs/hg38|vep|hla|ctat|rna|easyfuse|facets|hmf|lohhla|ascat|sequenza|snaf|normal|sample_identity
+licenses/predictors/          # netMHCpan, prime, mixMHCpred, bigmhc…
+packages/{installers,conda_pkgs,pip_cache}
+tools/{neodata_tools,EasyFuse,STAR-Fusion,…}
+software/miniforge3           # preferred shared conda (--one-shot / --prefer-deps-conda)
+configs/site.env.sh           # only file needed to activate runtime paths
+src/neo                       # pipeline code
+manifests/{sync_assets,conda_envs,verify_report}.tsv
+logs/
+work/nextflow_cache/
+```
+
+`configs/site.env.sh` must reference **only** paths under `DEPS_DIR`.
+
+Prefer **real directories** under `refs/` (sync-mode copy). External symlinks are
+allowed only for experiments; verify will warn with `EXTERNAL_SYMLINK`.
