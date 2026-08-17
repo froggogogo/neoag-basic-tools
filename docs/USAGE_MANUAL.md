@@ -8,7 +8,7 @@
 - 默认可写 deps：
   `/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps`
 - 有 `git`、`bash`、`curl`/`rsync`、出网（装 Miniforge / conda）
-- **不必**挂 zzbnew；**不必** clone neo
+- **不必**挂 zzbnew；**不必** clone neo；**deps 已齐时不必挂 zjl**
 - 仅当 deps 缺某项资产时，才需要可读的 zjl（`--asset-source`）
 
 ## 一键命令

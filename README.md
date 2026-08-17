@@ -20,8 +20,8 @@
 ## 环境要求
 
 - Linux x86_64（推荐 Ubuntu 20.04/22.04）
-- **写入**：能挂载 `/mnt/neoag_100T`
-- **首次灌库**：能挂载并**可读** `--asset-source`（默认 `/mnt/zjl-bgi-zzb/.../neodata4git`）
+- **写入**：能挂载 `/mnt/neoag_100T`（默认 deps 已预置时，不必挂 zjl）
+- **仅缺项灌库时**：才需要可读的 `--asset-source`（默认 `/mnt/zjl-bgi-zzb/.../neodata4git`）
 - 基础命令：`bash` `curl` `rsync` `find` `chmod`
 
 ## 使用说明

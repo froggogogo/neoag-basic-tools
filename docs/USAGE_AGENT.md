@@ -8,8 +8,8 @@
 - 能写入默认 deps（世界可写树）：
   `/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps`
 - 本机有 `git`、`bash`、网络（拉 Miniforge / conda 包）
-- **不必**挂载 zzbnew；**不必** clone neo 仓库
-- 若 deps 里某项 refs 仍缺失：才需要可读的 zjl asset-source（默认 `/mnt/zjl-bgi-zzb/.../neodata4git`）
+- **不必**挂载 zzbnew；**不必** clone neo 仓库；**deps 已齐时不必挂 zjl**
+- 仅当 deps 仍缺某项 refs 时，才需要可读的 zjl asset-source
 
 ## 直接复制给 Agent 的 Prompt
 

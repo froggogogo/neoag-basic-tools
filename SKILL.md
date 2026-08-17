@@ -9,17 +9,18 @@ description: >-
   fread fit patch, MHCflurry path layout, and VEP Perl isolation; verifies
   readability plus env smoke tests. Use when installing neoantigen basic
   tools or setting up neoag-basic-tools-install-deps on any intranet host
-  that mounts neoag_100T (and zjl when first copying assets).
+  that mounts neoag_100T. zjl is only needed if shared deps are still missing.
 ---
 
 # NeoAg Basic Tools Install
 
 ## Goal
 
-On any intranet Linux host that mounts **neoag_100T**（写入 deps）and **zjl-bgi-zzb**
-（首次灌库读取 asset-source）, run **one command** so the machine gets a complete
-**basic** neoantigen tool stack. After install, runtime should depend only on
-`$DEPS_DIR` on neoag_100T — not on zjl remaining readable.
+On any intranet Linux host that mounts **neoag_100T**, run **one command** so the
+machine gets a complete **basic** neoantigen tool stack. Shared refs live in
+`$DEPS_DIR`. **zjl is not required** when deps already contain the assets
+(A-class copy onto neoag_100T). zjl / `--asset-source` is only for filling
+missing items.
 
 ## One-shot (recommended)
 
@@ -54,7 +55,7 @@ See [references/runtime-hardening.md](references/runtime-hardening.md). Summary:
 
 | Mode | Behavior |
 |------|----------|
-| `copy`（默认） | 安装期必须能读 asset-source；复制后运行不再依赖 zjl |
+| `copy`（默认） | deps 已有可读目录则跳过，不碰 zjl；仅缺项才从 asset-source 复制 |
 | `symlink` | 探测源与链接可读；不可读则失败并提示改用 copy |
 | `sync --force-resync --sync-mode copy` | 拆除软链并物化为真实目录 |
 
@@ -81,7 +82,7 @@ See [references/runtime-hardening.md](references/runtime-hardening.md). Summary:
 
 ## Install workflow
 
-1. Confirm `/mnt/neoag_100T`；首次灌库还需可读的 `--asset-source`。
+1. Confirm `/mnt/neoag_100T` and `$DEPS_DIR`. zjl only if some refs are still missing.
 2. `bash scripts/install.sh --mode plan`
 3. `bash scripts/install.sh --mode install --one-shot --yes`
 4. Check `manifests/verify_report.tsv`

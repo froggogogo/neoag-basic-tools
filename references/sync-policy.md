@@ -30,9 +30,10 @@ This removes external symlinks under `refs/` / `licenses/` / `tools/neodata_tool
 
 | Phase | neoag_100T (deps) | zjl (asset-source) |
 |-------|-------------------|--------------------|
-| First install (copy) | required (write) | required (**readable**) |
-| Later run / verify | required | not required if copy completed |
-| symlink mode run | required | **still required readable** |
+| Shared deps already filled | required (write for envs/site.env) | **not required** |
+| Missing refs / `--force-resync` | required (write) | required (**readable**) |
+| Later run / verify | required | not required |
+| symlink mode | required | **still required readable** |
 
 ## `src/neo` install slice
 

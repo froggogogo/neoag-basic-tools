@@ -219,12 +219,12 @@ main() {
       fi
       if [[ -d "$ASSET_SOURCE" ]]; then
         if asset_readable "$ASSET_SOURCE"; then
-          ok "asset-source 可达且可读"
+          ok "asset-source 可达且可读（仅缺项灌库时需要）"
         else
-          warn "asset-source 存在但不可读: $ASSET_SOURCE"
+          warn "asset-source 存在但不可读: $ASSET_SOURCE（deps 已齐则可忽略）"
         fi
       else
-        warn "asset-source 不可达: $ASSET_SOURCE"
+        warn "asset-source 不可达: $ASSET_SOURCE（deps 已齐则可忽略，不必挂 zjl）"
       fi
       [[ -n "$NEO_SRC" && -d "$NEO_SRC" ]] && ok "neo-src 可达: $NEO_SRC" || warn "neo-src 未找到"
       ok "plan 完成（无写入）"

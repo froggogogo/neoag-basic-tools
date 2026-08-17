@@ -209,27 +209,53 @@ resolve_sync_mode() {
   esac
 }
 
+deps_dest_ready() {
+  local dest_rel="$1"
+  local dst="${DEPS_DIR}/${dest_rel}"
+  [[ "${FORCE_RESYNC:-0}" == "1" ]] && return 1
+  [[ -e "$dst" || -L "$dst" ]] || return 1
+  [[ -L "$dst" ]] && is_external_symlink "$dst" && return 1
+  asset_readable "$dst"
+}
+
 sync_assets() {
   resolve_sync_mode
   local mode="${SYNC_MODE}"
   local src_root="${ASSET_SOURCE}"
-  require_mount_prefix "$src_root" "asset-source"
   ensure_dir "${DEPS_DIR}" 777
   ensure_dir "${DEPS_DIR}/manifests" 777
   printf 'dest\tsource\tstatus\tmode\n' >"${DEPS_DIR}/manifests/sync_assets.tsv"
 
-  if [[ "$mode" == "symlink" ]]; then
+  local entry dest_rel
+  local need_source=0
+  if [[ "${FORCE_RESYNC:-0}" == "1" ]]; then
+    need_source=1
+  else
+    for entry in "${ASSET_MAP[@]}"; do
+      dest_rel="${entry##*|}"
+      if ! deps_dest_ready "$dest_rel"; then
+        need_source=1
+        break
+      fi
+    done
+  fi
+
+  if [[ "$need_source" != "1" ]]; then
+    log "deps 资产已齐且可读，跳过 asset-source（不需要 zjl）"
+  elif [[ "$mode" == "symlink" ]]; then
+    require_mount_prefix "$src_root" "asset-source"
     warn "sync-mode=symlink：deps 里的 refs 指向 ${src_root}"
     warn "风险：其它只挂 deps 盘的机器若读不到 asset-source，运行会失败。生产请用 --sync-mode copy。"
     if ! asset_readable "$src_root"; then
       die "ASSET_SOURCE_UNREADABLE" \
-        "asset-source 不可读: ${src_root}。无法建可用软链。请修权限，或改用能读该盘的账号 / --sync-mode copy（安装期仍需可读）。"
+        "asset-source 不可读: ${src_root}。无法建可用软链。请修权限，或改用能读该盘的账号 / --sync-mode copy（仅缺项灌库时需要）。"
     fi
   else
-    log "sync-mode=copy：将资产复制进 ${DEPS_DIR}（之后运行只需挂载 deps 所在盘）"
+    log "sync-mode=copy：缺项将从 asset-source 复制进 ${DEPS_DIR}"
+    require_mount_prefix "$src_root" "asset-source"
     if ! asset_readable "$src_root"; then
       die "ASSET_SOURCE_UNREADABLE" \
-        "asset-source 不可读: ${src_root}。无法 copy。请确认本机已挂载且当前用户可读 zjl-bgi-zzb。"
+        "deps 仍缺资产，且 asset-source 不可读: ${src_root}。请挂载可读的 zjl，或等共享 deps 灌完后再装。"
     fi
   fi
 
