@@ -7,9 +7,17 @@
 - 新机已挂载：`/mnt/neoag_100T`
 - 能写入默认 deps（世界可写树）：
   `/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps`
-- 本机有 `git`、`bash`、网络（拉 Miniforge / conda 包）
+- 本机有 `git`、`bash`；**仅当** `$DEPS_DIR/software/miniforge3` 还不存在时需要出网装 Miniforge / conda 包
 - **不必**挂载 zzbnew；**不必** clone neo 仓库；**deps 已齐时不必挂 zjl**
 - 仅当 deps 仍缺某项 refs 时，才需要可读的 zjl asset-source
+
+Miniforge 与 env 落在共享盘：
+
+```text
+/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3
+```
+
+第一台 `--one-shot` 若该路径没有 conda，会出网安装；已有则复用。其它机器挂盘后 `source .../configs/site.env.sh` 即可使用，不必装到 `/home`。
 
 ## 直接复制给 Agent 的 Prompt
 

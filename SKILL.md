@@ -72,6 +72,22 @@ See [references/runtime-hardening.md](references/runtime-hardening.md). Summary:
 
 `/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps`
 
+## Shared Miniforge (on neoag_100T)
+
+`--one-shot` / `--prefer-deps-conda` 使用：
+
+`/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3`
+
+- 该路径**还没有** conda：第一台安装机会**出网**把 Miniforge 装到这里，基础 env 建在 `envs/` 下。
+- **已经有了**：后续机器复用，不再重装 Miniforge / 已存在的同名 env。
+- 其它机器挂上同一块 `neoag_100T` 后，只需：
+
+```bash
+source /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/configs/site.env.sh
+```
+
+不必把 Conda 再装到 `/home` 或 `/root`。`source` 只设置 PATH 与 refs，不是重新安装。
+
 ## Skill vs neo
 
 本 skill **独立于** neo 仓库；安装机不必再 clone neo。

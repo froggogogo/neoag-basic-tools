@@ -31,16 +31,30 @@
 
 ## 一键安装（推荐）
 
-在已挂载 neoag_100T + zjl 的机器上：
+在已挂载 neoag_100T 的机器上（deps 已齐时不必挂 zjl）：
 
 ```bash
 cd /path/to/neoag-basic-tools-install
 bash scripts/install.sh --mode install --one-shot --yes
 ```
 
-等价于：copy 资产进 deps + 在 deps 内装/用 Miniforge + **mamba**（回退 conda）按 yml 建基础 env + 跑 `install_*.sh` + 运行期加固 + verify。
+等价于：同步资产（已有 refs 跳过）+ 在 deps 内装/用 Miniforge + **mamba**（回退 conda）按 yml 建基础 env + 跑 `install_*.sh` + 运行期加固 + verify。
 
-耗时说明：全量 copy refs（尤其 VEP/CTAT）和 conda env 创建可能要数小时；看 `deps/logs/`。
+### 共享 Miniforge
+
+路径固定为：
+
+```text
+/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3
+```
+
+| 情况 | 行为 |
+|------|------|
+| 该路径还没有 conda | 第一台安装机出网安装 Miniforge，env 建在 `envs/` |
+| 已经有 Miniforge / 同名 env | 后续机器复用，不重装 |
+| 其它新机只要用工具 | 挂盘后 `source .../configs/site.env.sh`，不必再装到 `/home` |
+
+耗时说明：从零 copy refs 和第一次建 conda env 可能要数小时；共享 deps 与 Miniforge 已在盘上时，新机 one-shot 会跳过已有项。
 
 ## 其它常用命令
 

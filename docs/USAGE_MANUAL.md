@@ -29,6 +29,14 @@ bash scripts/install.sh --mode install --one-shot --yes
 
 `--one-shot` 会：同步资产（已存在的 refs 默认跳过）→ 在 deps 内准备 Miniforge → **mamba/conda** 建基础 env → 跑 `install_*.sh` → 运行期加固 → verify。
 
+Miniforge 固定落在：
+
+```text
+/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3
+```
+
+第一台机若这里还没有 conda，会出网安装并把 env 建在 `envs/`；之后其它机器复用，不重装。只想用工具时，挂盘后 `source` 下面的 `site.env.sh` 即可。
+
 日志：`$DEPS_DIR/logs/`  
 验收：`$DEPS_DIR/manifests/verify_report.tsv`
 
