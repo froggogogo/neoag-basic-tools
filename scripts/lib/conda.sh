@@ -28,6 +28,7 @@ discover_conda() {
     "/opt/miniforge3/bin/conda"
     "/opt/miniconda3/bin/conda"
     "/mnt/zzbnew/peixunban/gl/miniconda3/bin/conda"
+    "/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3/bin/conda"
     "/mnt/zzbnew/peixunban/gl/neoag_basic_deps/software/miniforge3/bin/conda"
     "/home/na/miniforge3/bin/conda"
     "/root/neo/envs/miniforge3/bin/conda"
@@ -51,6 +52,7 @@ discover_conda() {
   CONDA_BASE="$(cd "$(dirname "$exe")/.." && pwd -P)"
   export CONDA_EXE CONDA_BASE
   ok "发现 Conda: CONDA_EXE=${CONDA_EXE} CONDA_BASE=${CONDA_BASE}"
+  resolve_mamba_exe
   return 0
 }
 
@@ -70,6 +72,7 @@ install_miniforge() {
     CONDA_EXE="${target}/bin/conda"
     CONDA_BASE="$(cd "$target" && pwd -P)"
     export CONDA_EXE CONDA_BASE
+    resolve_mamba_exe
     return 0
   fi
 
@@ -115,6 +118,46 @@ install_miniforge() {
   "${CONDA_EXE}" config --set pkgs_dirs "${DEPS_DIR}/packages/conda_pkgs" || true
   "${CONDA_EXE}" config --add envs_dirs "${CONDA_BASE}/envs" || true
   ok "Miniforge 安装完成: ${CONDA_BASE}"
+  resolve_mamba_exe
+}
+
+# Prefer mamba for env create / package install (same yml, faster solve). Fallback: conda.
+resolve_mamba_exe() {
+  MAMBA_EXE=""
+  local cand
+  local -a cands=()
+  [[ -n "${CONDA_BASE:-}" ]] && cands+=("${CONDA_BASE}/bin/mamba" "${CONDA_BASE}/condabin/mamba")
+  if command -v mamba >/dev/null 2>&1; then
+    cands+=("$(command -v mamba)")
+  fi
+  cands+=(
+    "${DEPS_DIR}/software/miniforge3/bin/mamba"
+    "/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3/bin/mamba"
+    "${HOME}/miniforge3/bin/mamba"
+    "${HOME}/mambaforge/bin/mamba"
+  )
+  for cand in "${cands[@]}"; do
+    [[ -n "$cand" && -x "$cand" ]] || continue
+    MAMBA_EXE="$cand"
+    break
+  done
+  if [[ -n "$MAMBA_EXE" ]]; then
+    CONDA_FRONTEND="$MAMBA_EXE"
+    export MAMBA_EXE CONDA_FRONTEND
+    ok "环境安装前端: mamba (${MAMBA_EXE})"
+  else
+    CONDA_FRONTEND="${CONDA_EXE:?}"
+    export CONDA_FRONTEND
+    warn "未找到 mamba，回退 conda 创建/安装环境（较慢）: ${CONDA_FRONTEND}"
+  fi
+}
+
+# Run: env create / install via mamba when available.
+conda_frontend() {
+  if [[ -z "${CONDA_FRONTEND:-}" ]]; then
+    resolve_mamba_exe
+  fi
+  "${CONDA_FRONTEND}" "$@"
 }
 
 resolve_conda() {
@@ -126,6 +169,7 @@ resolve_conda() {
       CONDA_BASE="$(cd "$(dirname "$deps_conda")/.." && pwd -P)"
       export CONDA_EXE CONDA_BASE
       ok "使用 deps 内 Conda: ${CONDA_BASE}"
+      resolve_mamba_exe
       return 0
     fi
     if [[ "${MODE}" == "plan" || "${MODE}" == "verify" ]]; then

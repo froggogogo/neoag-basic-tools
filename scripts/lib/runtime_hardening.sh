@@ -18,11 +18,20 @@ ensure_sequenza_datatable() {
 
   log "安装 r-data.table 到 neoag-sequenza（Sequenza fit fread 必需）"
   ensure_dir "${DEPS_DIR}/logs" 777
-  if [[ -n "${CONDA_EXE:-}" ]] && "${CONDA_EXE}" install -y -n neoag-sequenza -c conda-forge r-data.table \
+  local ok_install=0
+  if declare -F conda_frontend >/dev/null 2>&1; then
+    if conda_frontend install -y -n neoag-sequenza -c conda-forge r-data.table \
+        >"${DEPS_DIR}/logs/r_datatable_conda.out" 2>"${DEPS_DIR}/logs/r_datatable_conda.err"; then
+      ok_install=1
+    fi
+  elif [[ -n "${CONDA_EXE:-}" ]] && "${CONDA_EXE}" install -y -n neoag-sequenza -c conda-forge r-data.table \
       >"${DEPS_DIR}/logs/r_datatable_conda.out" 2>"${DEPS_DIR}/logs/r_datatable_conda.err"; then
-    ok "conda 安装 r-data.table 成功"
+    ok_install=1
+  fi
+  if [[ "$ok_install" -eq 1 ]]; then
+    ok "mamba/conda 安装 r-data.table 成功"
   else
-    warn "conda 安装 r-data.table 失败，见 ${DEPS_DIR}/logs/r_datatable_conda.err"
+    warn "mamba/conda 安装 r-data.table 失败，见 ${DEPS_DIR}/logs/r_datatable_conda.err"
     return 1
   fi
 

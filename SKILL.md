@@ -2,24 +2,25 @@
 name: neoag-basic-tools-install
 description: >-
   Portable A1 single-host installer for the basic neoantigen tool chain.
-  Creates a centralized dependency tree on zzbnew, discovers or installs
-  Conda without hardcoding machine paths, syncs refs/licenses/tools (default
-  copy into deps), ensures SpliceMutr genome R packages, Sequenza
-  r-data.table + fread fit patch, MHCflurry path layout, and VEP Perl
-  isolation; verifies readability plus env smoke tests. Use when installing
-  neoantigen basic tools, setting up neoag_basic_deps, preparing any intranet
-  server that mounts zzbnew (and zjl for the initial asset copy), or applying
-  Sequenza/MHCflurry/VEP runtime hardening from production runs.
+  Creates a centralized dependency tree on neoag_100T (default under
+  majiaxin/neoag-basic-tools-install-deps), discovers or installs Conda
+  without hardcoding machine paths, syncs refs/licenses/tools (default copy
+  into deps), ensures SpliceMutr genome R packages, Sequenza r-data.table +
+  fread fit patch, MHCflurry path layout, and VEP Perl isolation; verifies
+  readability plus env smoke tests. Use when installing neoantigen basic
+  tools, setting up neoag-basic-tools-install-deps, preparing any intranet
+  server that mounts neoag_100T (and zjl for the initial asset copy), or
+  applying Sequenza/MHCflurry/VEP runtime hardening from production runs.
 ---
 
 # NeoAg Basic Tools Install
 
 ## Goal
 
-On any intranet Linux host that mounts **zzbnew**（写入 deps）and **zjl-bgi-zzb**
+On any intranet Linux host that mounts **neoag_100T**（写入 deps）and **zjl-bgi-zzb**
 （首次灌库读取 asset-source）, run **one command** so the machine gets a complete
 **basic** neoantigen tool stack. After install, runtime should depend only on
-`$DEPS_DIR` on zzbnew — not on zjl remaining readable.
+`$DEPS_DIR` on neoag_100T — not on zjl remaining readable.
 
 ## One-shot (recommended)
 
@@ -30,11 +31,12 @@ bash scripts/install.sh --mode install --one-shot --yes
 
 `--one-shot` enables:
 
-- `--sync-mode copy`（默认已是 copy）：把 refs/licenses/tools **复制进** zzbnew deps
+- `--sync-mode copy`（默认已是 copy）：把 refs/licenses/tools **复制进** neoag_100T deps
 - `--with-envs` + `--with-tool-scripts`
 - `--prefer-deps-conda`：Conda/envs 优先落在 `$DEPS_DIR/software/miniforge3`
 - 安装后自动 `--mode verify`（含可读性、env、`BSgenome.Hsapiens.UCSC.hg38`、`data.table`）
 - **运行期加固**：`r-data.table`、MHCflurry `2.0.0→4/2.0.0` 布局、deps 内 Sequenza fit fread 补丁
+- **环境创建优先 mamba**（`mamba env create -f …yml`）；无 mamba 时回退 conda
 
 ## Runtime hardening (from recent production)
 
@@ -57,7 +59,7 @@ Installer mitigations:
 
 | Mode | Behavior |
 |------|----------|
-| `copy`（默认） | 安装期必须能读 asset-source；复制进 zzbnew 后运行不再依赖 zjl |
+| `copy`（默认） | 安装期必须能读 asset-source；复制进 neoag_100T 后运行不再依赖 zjl |
 | `symlink` | 安装前/后探测源与链接可读；不可读则失败并提示改用 copy |
 | `sync --force-resync --sync-mode copy` | 拆除已有软链并物化为真实目录 |
 
@@ -69,16 +71,24 @@ Installer mitigations:
 - **EasyFuse requires Ubuntu 22.04.** Elsewhere: sync refs only, skip runtime.
 - Writes require `--yes` or confirmation.
 - Failures print `reason=` + fix hint.
-- Do not leave unbounded `find /mnt/zzbnew|zjl…` inventory jobs on NAS.
+- Do not leave unbounded `find /mnt/zzbnew|zjl|neoag_100T…` inventory jobs on NAS.
 
 ## Default deps root
 
-`/mnt/zzbnew/peixunban/gl/neoag_basic_deps`
+`/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps`
+
+## Skill vs neo（独立）
+
+本 skill **不是** neo 仓库的一部分，安装机也**不必**再 clone neo。
+
+- 运行/建 env 需要的文件以 **`$DEPS_DIR/src/neo` 精简切片** 为准（仅 `conda/env.neoag-*.yml`、`scripts/install_*.sh`、`scripts/run_sequenza_fit.R`，不是完整 neo git）。
+- 新机流程：挂载 neoag_100T → `git clone` **本 skill** → `install.sh --one-shot`（deps 已有切片时无需 `--neo-src`）。
+- `--neo-src` 仅给「首次从某处灌切片」的引导机用，不是常规依赖。
 
 ## Agent workflow
 
-1. Confirm host sees `/mnt/zzbnew` and (for first sync) `/mnt/zjl-bgi-zzb` / `--asset-source`.
-2. `bash scripts/install.sh --mode plan` — show plan; check asset-source **readable**.
+1. Confirm host sees `/mnt/neoag_100T`；若 deps 尚未灌满，引导机还需可读的 `--asset-source`（及一次性灌 `src/neo` 的来源）。
+2. `bash scripts/install.sh --mode plan` — show plan；确认 `$DEPS_DIR/src/neo` 或资产源就绪。
 3. On approval: `bash scripts/install.sh --mode install --one-shot --yes`
 4. Summarize `manifests/verify_report.tsv`（REQUIRED failures, external symlinks, R pkgs, MHCflurry）.
 5. Tell user: `source $DEPS_DIR/configs/site.env.sh`

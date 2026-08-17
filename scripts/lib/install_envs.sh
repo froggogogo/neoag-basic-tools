@@ -28,12 +28,12 @@ ensure_splicemutr_genome_pkgs() {
   fi
 
   log "安装 BSgenome.Hsapiens.UCSC.hg38 到 neoag-splicemutr（SpliceMutr 运行必需）"
-  # Prefer conda/bioconda if available; fall back to BiocManager
-  if "${CONDA_EXE}" install -y -n neoag-splicemutr -c bioconda -c conda-forge \
+  # Prefer mamba/conda bioconda; fall back to BiocManager
+  if conda_frontend install -y -n neoag-splicemutr -c bioconda -c conda-forge \
       bioconductor-bsgenome.hsapiens.ucsc.hg38 2>"${DEPS_DIR}/logs/bsgenome_conda.err"; then
-    ok "conda 安装 BSgenome.Hsapiens.UCSC.hg38 成功"
+    ok "mamba/conda 安装 BSgenome.Hsapiens.UCSC.hg38 成功"
   else
-    warn "conda 安装失败，尝试 BiocManager（见 logs/bsgenome_conda.err）"
+    warn "mamba/conda 安装失败，尝试 BiocManager（见 logs/bsgenome_conda.err）"
     if ! "$rscript" -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager", repos="https://cloud.r-project.org"); BiocManager::install("BSgenome.Hsapiens.UCSC.hg38", ask=FALSE, update=FALSE)' \
       >"${DEPS_DIR}/logs/bsgenome_bioc.out" 2>"${DEPS_DIR}/logs/bsgenome_bioc.err"; then
       warn "BiocManager 安装 BSgenome.Hsapiens.UCSC.hg38 失败；verify 将标红。日志: ${DEPS_DIR}/logs/bsgenome_bioc.err"
@@ -51,9 +51,10 @@ ensure_splicemutr_genome_pkgs() {
 
 install_basic_envs() {
   [[ -n "${CONDA_EXE:-}" && -x "${CONDA_EXE}" ]] || die "NO_CONDA" "未解析到 conda，无法创建环境"
+  resolve_mamba_exe
   local neo="${DEPS_DIR}/src/neo"
   if [[ ! -d "$neo" ]]; then
-    die "NO_NEO_SRC" "缺少 ${neo}。请先 --neo-src 同步代码，或检查 sync 步骤。"
+    die "NO_NEO_SRC" "缺少 ${neo}。请确认 A 迁盘已灌入 deps/src/neo 安装切片，或在引导机用 --neo-src 灌一次（常规安装不必碰 neo git）。"
   fi
 
   ensure_dir "${DEPS_DIR}/packages/conda_pkgs" 1777
@@ -62,7 +63,7 @@ install_basic_envs() {
 
   local spec name yml_rel yml env_prefix
   local pass=0 fail=0
-  printf 'env\tyaml\tstatus\tdetail\n' >"${DEPS_DIR}/manifests/conda_envs.tsv"
+  printf 'env\tyaml\tstatus\tdetail\tfrontend\n' >"${DEPS_DIR}/manifests/conda_envs.tsv"
 
   for spec in "${BASIC_ENV_SPECS[@]}"; do
     name="${spec%%|*}"
@@ -70,28 +71,28 @@ install_basic_envs() {
     yml="${neo}/${yml_rel}"
     if [[ ! -f "$yml" ]]; then
       warn "缺少 env 文件: $yml"
-      echo -e "${name}\t${yml}\tMISSING_YAML\t-" >>"${DEPS_DIR}/manifests/conda_envs.tsv"
+      echo -e "${name}\t${yml}\tMISSING_YAML\t-\t-" >>"${DEPS_DIR}/manifests/conda_envs.tsv"
       fail=$((fail + 1))
       continue
     fi
     env_prefix="$(cd "$(dirname "${CONDA_EXE}")/.." && pwd -P)/envs/${name}"
     if [[ -d "${env_prefix}" ]]; then
       ok "conda env 已存在: $name (${env_prefix})"
-      echo -e "${name}\t${yml}\tEXISTS\t${env_prefix}" >>"${DEPS_DIR}/manifests/conda_envs.tsv"
+      echo -e "${name}\t${yml}\tEXISTS\t${env_prefix}\t-" >>"${DEPS_DIR}/manifests/conda_envs.tsv"
       pass=$((pass + 1))
       continue
     fi
-    log "创建 conda env: $name <- $yml"
-    if "${CONDA_EXE}" env create -n "$name" -f "$yml"; then
+    log "创建 env (via ${CONDA_FRONTEND##*/}): $name <- $yml"
+    if conda_frontend env create -n "$name" -f "$yml"; then
       ok "创建成功: $name"
-      echo -e "${name}\t${yml}\tCREATED\t-" >>"${DEPS_DIR}/manifests/conda_envs.tsv"
+      echo -e "${name}\t${yml}\tCREATED\t-\t${CONDA_FRONTEND}" >>"${DEPS_DIR}/manifests/conda_envs.tsv"
       pass=$((pass + 1))
     else
       err "创建失败: $name"
-      echo -e "${name}\t${yml}\tFAIL\tsee logs" >>"${DEPS_DIR}/manifests/conda_envs.tsv"
+      echo -e "${name}\t${yml}\tFAIL\tsee logs\t${CONDA_FRONTEND}" >>"${DEPS_DIR}/manifests/conda_envs.tsv"
       fail=$((fail + 1))
       if [[ "${CONTINUE_ON_ERROR}" != "1" ]]; then
-        die "ENV_CREATE_FAILED" "conda env create 失败: $name。可加 --continue-on-error 跳过并继续。"
+        die "ENV_CREATE_FAILED" "env create 失败: $name（frontend=${CONDA_FRONTEND}）。可加 --continue-on-error 跳过并继续。"
       fi
     fi
   done

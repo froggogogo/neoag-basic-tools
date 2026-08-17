@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Create / normalize centralized deps directory on zzbnew
+# Create / normalize centralized deps directory on neoag_100T
 
-DEFAULT_DEPS_DIR="/mnt/zzbnew/peixunban/gl/neoag_basic_deps"
+DEFAULT_DEPS_DIR="/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps"
 
 # World-writable shared tree (user requirement: 所有人具有所有权限)
 open_perms_tree() {
@@ -14,7 +14,7 @@ open_perms_tree() {
 
 init_deps_layout() {
   local root="${DEPS_DIR}"
-  require_mount_prefix "$(dirname "$root")" "zzbnew parent"
+  require_mount_prefix "/mnt/neoag_100T" "neoag_100T"
   log "初始化依赖目录: ${root}"
   local d
   for d in \
@@ -45,7 +45,7 @@ init_deps_layout() {
 
 write_deps_readme() {
   cat >"${DEPS_DIR}/README.md" <<EOF
-# neoag_basic_deps
+# neoag-basic-tools-install-deps
 
 统一新抗原基础工具依赖目录（A1 单机全量 / 内网可移植）。
 
@@ -63,11 +63,11 @@ write_deps_readme() {
 | tools/ | 第三方工具源码/二进制树 |
 | software/ | 可选共享 Miniforge |
 | configs/ | site.env.sh 等机器无关配置 |
-| src/neo | neoag 流水线代码 |
+| src/neo | 安装 skill 精简切片（env yml + install_*.sh + sequenza fit R；非完整 neo git） |
 | manifests/ | 同步与验收清单 |
 | logs/ | 安装日志 |
 
-运行时只需挂载本目录所在 NAS（zzbnew），并 \`source configs/site.env.sh\`。
+运行时只需挂载本目录所在 NAS（neoag_100T），并 \`source configs/site.env.sh\`。
 EOF
   chmod a+rw "${DEPS_DIR}/README.md" 2>/dev/null || true
 }

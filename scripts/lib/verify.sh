@@ -19,7 +19,9 @@ declare -a VERIFY_MARKERS=(
   "refs/lohhla/novoalign.lic|Novoalign license|OPTIONAL_LICENSED|file"
   "licenses/predictors/netMHCpan|NetMHCpan|OPTIONAL_LICENSED|dir"
   "configs/site.env.sh|site.env.sh|REQUIRED|file"
-  "src/neo|neo source tree|REQUIRED|dir"
+  "src/neo/conda/env.neoag-tools.yml|install-slice env yml|REQUIRED|file"
+  "src/neo/scripts/install_vep.sh|install-slice tool script|REQUIRED|file"
+  "src/neo/scripts/run_sequenza_fit.R|install-slice sequenza fit|REQUIRED|file"
 )
 
 # env_name|R_or_bin smoke hint

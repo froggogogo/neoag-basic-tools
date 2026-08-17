@@ -245,7 +245,8 @@ sync_assets() {
     fi
   done
 
-  # neo source tree (optional but recommended)
+  # neo tree: prefer existing deps snapshot (skill is independent of neo git).
+  # --neo-src only for bootstrap machines that still need to seed the snapshot once.
   if [[ -n "${NEO_SRC}" && -d "${NEO_SRC}" ]]; then
     local neo_dst="${DEPS_DIR}/src/neo"
     if [[ -L "$neo_dst" && "$mode" == "copy" ]]; then
@@ -266,9 +267,13 @@ sync_assets() {
       require_cmd rsync
       rsync -a --exclude '.git' "${NEO_SRC}/" "${neo_dst}/"
       ok "force-resync neo src -> $neo_dst"
+    else
+      ok "沿用已有 deps 安装切片: $neo_dst（无需 neo git）"
     fi
+  elif [[ -d "${DEPS_DIR}/src/neo" ]]; then
+    ok "沿用已有 deps 安装切片: ${DEPS_DIR}/src/neo（无需 --neo-src / neo git）"
   else
-    warn "未提供可用 --neo-src；跳过流水线代码同步。可用 --neo-src /path/to/neo"
+    warn "deps 尚无 src/neo 安装切片。新机应依赖 A 迁盘；仅引导机可用 --neo-src 灌入一次。"
   fi
 
   chmod a+rw "${DEPS_DIR}/manifests/sync_assets.tsv" 2>/dev/null || true

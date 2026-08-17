@@ -32,11 +32,11 @@ Modes:
   verify   验收：refs 存在且可读、conda env、关键 R 包冒烟
 
 Options:
-  --deps-dir DIR          统一依赖目录（默认 /mnt/zzbnew/peixunban/gl/neoag_basic_deps）
+  --deps-dir DIR          统一依赖目录（默认 /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps）
   --conda-dir DIR         Conda 安装目录（未发现时使用；--one-shot 默认装到 deps/software/miniforge3）
   --asset-source DIR      资产源（默认 /mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git）
   --neo-src DIR           neo 流水线源码
-  --sync-mode MODE        copy|symlink|auto（默认 copy：资产落入 zzbnew，不依赖 zjl 可读）
+  --sync-mode MODE        copy|symlink|auto（默认 copy：资产落入 neoag_100T，不依赖 zjl 可读）
   --one-shot              推荐：copy + envs + tool-scripts + conda 优先装进 deps-dir
   --with-envs             install 时创建基础 conda 环境
   --with-tool-scripts     install/envs 时执行 neo scripts/install_*.sh
@@ -48,10 +48,10 @@ Options:
   -h, --help              帮助
 
 Examples:
-  # 挂载了 zzbnew + zjl 的机器上：一键装完并验收
+  # 挂载了 neoag_100T + zjl 的机器上：一键装完并验收
   bash scripts/install.sh --mode install --one-shot --yes
 
-  # 把现有软链 refs 物化进 zzbnew（解决「源盘不让读」）
+  # 把现有软链 refs 物化进 neoag_100T（解决「源盘不让读」）
   bash scripts/install.sh --mode sync --yes --sync-mode copy --force-resync
 
   bash scripts/install.sh --mode plan
@@ -110,7 +110,8 @@ export MODE DEPS_DIR CONDA_DIR ASSET_SOURCE NEO_SRC SYNC_MODE
 export WITH_ENVS WITH_TOOL_SCRIPTS CONTINUE_ON_ERROR ALLOW_ROOT_CONDA YES
 export PREFER_DEPS_CONDA FORCE_RESYNC ONE_SHOT
 
-# Resolve default neo-src candidates (parameterized, not single-host hardcode)
+# Resolve neo snapshot: prefer deps (skill independent of neo git).
+# Fallbacks only for bootstrap hosts that still have a live neo checkout.
 if [[ -z "${NEO_SRC}" ]]; then
   for cand in \
     "${DEPS_DIR}/src/neo" \
@@ -206,7 +207,7 @@ main() {
   case "$MODE" in
     plan)
       print_plan
-      if [[ -d "/mnt/zzbnew" ]]; then ok "zzbnew 挂载可见"; else warn "未见 /mnt/zzbnew"; fi
+      if [[ -d "/mnt/neoag_100T" ]]; then ok "neoag_100T 挂载可见"; else warn "未见 /mnt/neoag_100T"; fi
       if [[ -d "/mnt/zjl-bgi-zzb" ]]; then ok "zjl-bgi-zzb 挂载可见"; else warn "未见 /mnt/zjl-bgi-zzb（copy/symlink 灌库需要）"; fi
       if discover_conda || [[ "${PREFER_DEPS_CONDA}" == "1" ]]; then
         :
