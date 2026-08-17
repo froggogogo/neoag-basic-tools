@@ -4,10 +4,12 @@ description: >-
   Portable A1 single-host installer for the basic neoantigen tool chain.
   Creates a centralized dependency tree on zzbnew, discovers or installs
   Conda without hardcoding machine paths, syncs refs/licenses/tools (default
-  copy into deps), ensures SpliceMutr genome R packages, and verifies
-  readability plus env smoke tests. Use when installing neoantigen basic
-  tools, setting up neoag_basic_deps, or preparing any intranet server that
-  mounts zzbnew (and zjl for the initial asset copy) to run the basic pipeline.
+  copy into deps), ensures SpliceMutr genome R packages, Sequenza
+  r-data.table + fread fit patch, MHCflurry path layout, and VEP Perl
+  isolation; verifies readability plus env smoke tests. Use when installing
+  neoantigen basic tools, setting up neoag_basic_deps, preparing any intranet
+  server that mounts zzbnew (and zjl for the initial asset copy), or applying
+  Sequenza/MHCflurry/VEP runtime hardening from production runs.
 ---
 
 # NeoAg Basic Tools Install
@@ -31,7 +33,19 @@ bash scripts/install.sh --mode install --one-shot --yes
 - `--sync-mode copy`（默认已是 copy）：把 refs/licenses/tools **复制进** zzbnew deps
 - `--with-envs` + `--with-tool-scripts`
 - `--prefer-deps-conda`：Conda/envs 优先落在 `$DEPS_DIR/software/miniforge3`
-- 安装后自动 `--mode verify`（含可读性、env、`BSgenome.Hsapiens.UCSC.hg38`）
+- 安装后自动 `--mode verify`（含可读性、env、`BSgenome.Hsapiens.UCSC.hg38`、`data.table`）
+- **运行期加固**：`r-data.table`、MHCflurry `2.0.0→4/2.0.0` 布局、deps 内 Sequenza fit fread 补丁
+
+## Runtime hardening (from recent production)
+
+See [references/runtime-hardening.md](references/runtime-hardening.md). Summary:
+
+| Issue | Installer / agent action |
+|-------|--------------------------|
+| Sequenza fit vroom / fake `.gz` | `ensure_sequenza_datatable` + `scripts/patches/run_sequenza_fit.fread.R` |
+| MHCflurry missing / wrong path | `ensure_mhcflurry_layout`；`site.env` 设 `MHCFLURRY_DATA_DIR` |
+| VEP Perl 串台（miniconda） | `source site.env.sh` 后调用 `neoag_use_vep_perl`；优先复用已 CSQ 的 VCF |
+| 外部 neo 树尚未打补丁 | `bash scripts/apply_sequenza_fit_fread_patch.sh --fit-r /path/to/run_sequenza_fit.R` |
 
 ## Symlink risk (why default is copy)
 
@@ -55,6 +69,7 @@ Installer mitigations:
 - **EasyFuse requires Ubuntu 22.04.** Elsewhere: sync refs only, skip runtime.
 - Writes require `--yes` or confirmation.
 - Failures print `reason=` + fix hint.
+- Do not leave unbounded `find /mnt/zzbnew|zjl…` inventory jobs on NAS.
 
 ## Default deps root
 
@@ -65,8 +80,9 @@ Installer mitigations:
 1. Confirm host sees `/mnt/zzbnew` and (for first sync) `/mnt/zjl-bgi-zzb` / `--asset-source`.
 2. `bash scripts/install.sh --mode plan` — show plan; check asset-source **readable**.
 3. On approval: `bash scripts/install.sh --mode install --one-shot --yes`
-4. Summarize `manifests/verify_report.tsv`（REQUIRED failures, external symlinks, R pkgs）.
+4. Summarize `manifests/verify_report.tsv`（REQUIRED failures, external symlinks, R pkgs, MHCflurry）.
 5. Tell user: `source $DEPS_DIR/configs/site.env.sh`
+6. If Sequenza fit / ranking fails with known errors → follow `references/runtime-hardening.md`.
 
 If an old install still has external symlinks:
 
@@ -81,3 +97,4 @@ bash scripts/install.sh --mode verify
 - [references/deps-layout.md](references/deps-layout.md)
 - [references/sync-policy.md](references/sync-policy.md)
 - [references/basic-tool-list.md](references/basic-tool-list.md)
+- [references/runtime-hardening.md](references/runtime-hardening.md)

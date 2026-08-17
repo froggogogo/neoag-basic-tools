@@ -223,11 +223,55 @@ verify_installation() {
         echo -e "r:sequenza\tsequenza\tRPKG\tMISSING_PKG\tneoag-sequenza" >>"$report"
         req_fail=$((req_fail + 1))
       fi
+      if "${sq_dir}/bin/Rscript" -e 'cat(requireNamespace("data.table", quietly=TRUE), "\n")' 2>/dev/null | grep -q TRUE; then
+        ok "VERIFY R: data.table in neoag-sequenza"
+        echo -e "r:data.table\tdata.table\tRPKG\tOK\tneoag-sequenza" >>"$report"
+      else
+        warn "VERIFY R: data.table missing — Sequenza fit fread 补丁会失败"
+        echo -e "r:data.table\tdata.table\tRPKG\tMISSING_PKG\trun ensure_sequenza_datatable / conda install r-data.table" >>"$report"
+        req_fail=$((req_fail + 1))
+      fi
+    fi
+
+    # MHCflurry models layout (optional for structure, required for ranking)
+    local mf_ok=0
+    local mf
+    for mf in \
+      "${DEPS_DIR}/packages/mhcflurry_data" \
+      "${HOME:-}/.local/share/mhcflurry" \
+      "/home/na/.local/share/mhcflurry"
+    do
+      [[ -n "$mf" && -d "$mf" ]] || continue
+      if [[ -e "${mf}/2.0.0/models_class1_presentation" || -e "${mf}/4/2.0.0/models_class1_presentation" ]]; then
+        ok "VERIFY MHCflurry models under ${mf}"
+        echo -e "mhcflurry:models\tmodels_class1_presentation\tASSET\tOK\t${mf}" >>"$report"
+        mf_ok=1
+        break
+      fi
+    done
+    if [[ "$mf_ok" -eq 0 ]]; then
+      warn "VERIFY MHCflurry models missing — unified_ranking/mhcflurry-predict 会失败"
+      echo -e "mhcflurry:models\tmodels_class1_presentation\tASSET\tMISSING\tmhcflurry-downloads fetch models_class1_presentation" >>"$report"
+      # optional: do not increment req_fail (licensed/user download); keep as soft warn
+      opt_miss=$((opt_miss + 1))
     fi
   else
     warn "VERIFY conda: not found"
     echo -e "conda\tconda\tENV\tMISSING\t-" >>"$report"
     req_fail=$((req_fail + 1))
+  fi
+
+  # Sequenza fit patch presence in deps neo (soft)
+  local fit_r="${DEPS_DIR}/src/neo/scripts/run_sequenza_fit.R"
+  if [[ -f "$fit_r" ]]; then
+    if grep -q 'data.table::fread' "$fit_r" && grep -q 'assignInNamespace' "$fit_r"; then
+      ok "VERIFY sequenza fit fread patch present"
+      echo -e "patch:sequenza_fit_fread\trun_sequenza_fit.R\tPATCH\tOK\t${fit_r}" >>"$report"
+    else
+      warn "VERIFY sequenza fit 尚未含 fread 补丁 — 见 apply_sequenza_fit_fread_patch.sh"
+      echo -e "patch:sequenza_fit_fread\trun_sequenza_fit.R\tPATCH\tMISSING\tbash scripts/apply_sequenza_fit_fread_patch.sh --fit-r ${fit_r}" >>"$report"
+      opt_miss=$((opt_miss + 1))
+    fi
   fi
 
   chmod a+rw "$report" 2>/dev/null || true

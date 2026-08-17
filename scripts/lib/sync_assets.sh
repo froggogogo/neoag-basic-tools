@@ -349,6 +349,46 @@ export PRIME_HOME="\${NEOAG_BASIC_DEPS_DIR}/licenses/predictors/prime"
 export MIXMHCPRED_HOME="\${NEOAG_BASIC_DEPS_DIR}/licenses/predictors/mixMHCpred_install"
 export BIGMHC_DIR="\${NEOAG_BASIC_DEPS_DIR}/licenses/predictors/bigmhc"
 
+# MHCflurry: prefer deps hint / user download dir (layout may need 2.0.0 -> 4/2.0.0 shim)
+if [[ -f "\${NEOAG_BASIC_DEPS_DIR}/configs/mhcflurry_data_dir.txt" ]]; then
+  export MHCFLURRY_DATA_DIR="\$(head -1 "\${NEOAG_BASIC_DEPS_DIR}/configs/mhcflurry_data_dir.txt" | tr -d '[:space:]')"
+elif [[ -d "\${HOME}/.local/share/mhcflurry" ]]; then
+  export MHCFLURRY_DATA_DIR="\${HOME}/.local/share/mhcflurry"
+fi
+
+# VEP: isolate Perl from system/miniconda (do not mix /root/miniconda3 PERL5LIB)
+neoag_use_vep_perl() {
+  local vep="\${NEOAG_CONDA_BASE}/envs/neoag-vep"
+  if [[ ! -d "\$vep" ]]; then
+    echo "[site.env] neoag-vep missing under \${NEOAG_CONDA_BASE}/envs" >&2
+    return 1
+  fi
+  export NEOAG_VEP_BIN="\${vep}/bin/vep"
+  export PATH="\${vep}/bin:\${PATH}"
+  local pl=""
+  local d
+  for d in \\
+    "\${vep}/lib/perl5/site_perl" \\
+    "\${vep}/lib/perl5/vendor_perl" \\
+    "\${vep}/lib/perl5/core_perl" \\
+    "\${vep}/lib/perl5/5.32/site_perl" \\
+    "\${vep}/lib/perl5/5.32/vendor_perl" \\
+    "\${vep}/lib/perl5/5.32/core_perl"
+  do
+    [[ -d "\$d" ]] || continue
+    if [[ -z "\$pl" ]]; then pl="\$d"; else pl="\$pl:\$d"; fi
+  done
+  if [[ -d "\${vep}/share" ]]; then
+    local share_mod
+    share_mod="\$(find "\${vep}/share" -maxdepth 3 -type d -name modules 2>/dev/null | head -1 || true)"
+    if [[ -n "\$share_mod" ]]; then
+      if [[ -z "\$pl" ]]; then pl="\$share_mod"; else pl="\$pl:\$share_mod"; fi
+    fi
+  fi
+  export PERL5LIB="\$pl"
+  export NEOAG_VEP_PERL5LIB="\$pl"
+}
+
 # Tool trees
 export NEOAG_EASYFUSE_HOME="\${NEOAG_BASIC_DEPS_DIR}/tools/EasyFuse"
 export NEOAG_STAR_FUSION_HOME="\${NEOAG_BASIC_DEPS_DIR}/tools/STAR-Fusion"

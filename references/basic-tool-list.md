@@ -25,3 +25,19 @@ From `基础版模块、工具和机器.xlsx` plus production closure deps.
 
 STAR/samtools, VEP(+cache), pVACtools / MHCflurry, GATK (as needed),
 reference FASTA/GTF/CTAT, and licensed predictors when available.
+
+### Sequenza (fit)
+
+- Env `neoag-sequenza` must include **`data.table` / `r-data.table`**
+- Fit script should use fread patch when `*.small.seqz.gz` is plain text
+  (see `references/runtime-hardening.md` and `scripts/patches/run_sequenza_fit.fread.R`)
+
+### MHCflurry (ranking)
+
+- Models under `~/.local/share/mhcflurry/2.0.0/...` (shim `2.0.0 → 4/2.0.0` if needed)
+- Prefer annotated CSQ VCF for SNV to avoid re-running VEP on polluted Perl hosts
+
+### VEP
+
+- Isolate `PERL5LIB` to `neoag-vep` only (`neoag_use_vep_perl` in `site.env.sh`)
+

@@ -105,6 +105,17 @@ install_basic_envs() {
     fi
   fi
 
+  # Sequenza fit fread path needs data.table (see references/runtime-hardening.md)
+  if declare -F ensure_sequenza_datatable >/dev/null 2>&1; then
+    if ! ensure_sequenza_datatable; then
+      fail=$((fail + 1))
+      if [[ "${CONTINUE_ON_ERROR}" != "1" ]]; then
+        die "DATATABLE_MISSING" \
+          "neoag-sequenza 缺少 r-data.table。见 ${DEPS_DIR}/logs/r_datatable_conda.err；或加 --continue-on-error。"
+      fi
+    fi
+  fi
+
   # OptiType via neo script when available
   if [[ -x "${neo}/scripts/install_optitype.sh" ]]; then
     log "运行 install_optitype.sh"
