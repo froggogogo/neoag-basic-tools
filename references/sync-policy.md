@@ -30,16 +30,17 @@ This removes external symlinks under `refs/` / `licenses/` / `tools/neodata_tool
 
 | Phase | neoag_100T (deps) | zjl (asset-source) |
 |-------|-------------------|--------------------|
-| First install (copy) / A 迁盘 | required (write) | required (**readable**) |
+| First install (copy) | required (write) | required (**readable**) |
 | Later run / verify | required | not required if copy completed |
 | symlink mode run | required | **still required readable** |
 
 ## `src/neo` install slice
 
-`$DEPS_DIR/src/neo` is **not** a full neo git tree. A 迁盘 / bootstrap only seeds:
+`$DEPS_DIR/src/neo` is **not** a full neo git tree. It only needs:
 
 - `conda/env.neoag-*.yml` used by the installer
 - `scripts/install_*.sh` invoked by `--with-tool-scripts`
 - `scripts/run_sequenza_fit.R` for runtime hardening
 
-New hosts pull this skill from git and mount deps; they do not need the neo repository.
+Install hosts mount a deps tree that already contains this slice, or pass
+`--neo-src` once to seed it. They do not need to clone the neo repository.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # neoag-basic-tools-install — portable A1 single-host installer
-# Intranet-ready: centralized deps on zzbnew, parameterized paths, no machine hardcoding.
+# Intranet-ready: centralized deps on neoag_100T, parameterized paths, no machine hardcoding.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -110,16 +110,14 @@ export MODE DEPS_DIR CONDA_DIR ASSET_SOURCE NEO_SRC SYNC_MODE
 export WITH_ENVS WITH_TOOL_SCRIPTS CONTINUE_ON_ERROR ALLOW_ROOT_CONDA YES
 export PREFER_DEPS_CONDA FORCE_RESYNC ONE_SHOT
 
-# Resolve neo snapshot: prefer deps (skill independent of neo git).
-# Fallbacks only for bootstrap hosts that still have a live neo checkout.
+# Resolve neo install slice: prefer deps (skill independent of neo git).
 if [[ -z "${NEO_SRC}" ]]; then
   for cand in \
     "${DEPS_DIR}/src/neo" \
-    "/mnt/zzbnew/peixunban/gl/mjx/neogit/neo" \
     "${PWD}/neo" \
     "${HOME}/neo"
   do
-    if [[ -f "${cand}/pyproject.toml" || -f "${cand}/README.md" ]]; then
+    if [[ -f "${cand}/pyproject.toml" || -f "${cand}/README.md" || -f "${cand}/conda/env.neoag-tools.yml" ]]; then
       NEO_SRC="$cand"
       break
     fi

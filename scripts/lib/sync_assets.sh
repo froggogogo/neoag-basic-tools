@@ -199,7 +199,7 @@ resolve_sync_mode() {
   case "${SYNC_MODE}" in
     copy|symlink) ;;
     auto)
-      warn "sync-mode=auto → 使用 copy（资产落入 zzbnew deps，不依赖 zjl 挂载可读）"
+      warn "sync-mode=auto → 使用 copy（资产落入 deps，不依赖 asset-source 长期可读）"
       SYNC_MODE="copy"
       export SYNC_MODE
       ;;
@@ -220,13 +220,13 @@ sync_assets() {
 
   if [[ "$mode" == "symlink" ]]; then
     warn "sync-mode=symlink：deps 里的 refs 指向 ${src_root}"
-    warn "风险：安装机或其它只挂 zzbnew 的机器若读不到 zjl，运行会失败。生产请用 --sync-mode copy。"
+    warn "风险：其它只挂 deps 盘的机器若读不到 asset-source，运行会失败。生产请用 --sync-mode copy。"
     if ! asset_readable "$src_root"; then
       die "ASSET_SOURCE_UNREADABLE" \
         "asset-source 不可读: ${src_root}。无法建可用软链。请修权限，或改用能读该盘的账号 / --sync-mode copy（安装期仍需可读）。"
     fi
   else
-    log "sync-mode=copy：将资产复制进 ${DEPS_DIR}（之后运行只需挂载 zzbnew）"
+    log "sync-mode=copy：将资产复制进 ${DEPS_DIR}（之后运行只需挂载 deps 所在盘）"
     if ! asset_readable "$src_root"; then
       die "ASSET_SOURCE_UNREADABLE" \
         "asset-source 不可读: ${src_root}。无法 copy。请确认本机已挂载且当前用户可读 zjl-bgi-zzb。"
@@ -273,7 +273,7 @@ sync_assets() {
   elif [[ -d "${DEPS_DIR}/src/neo" ]]; then
     ok "沿用已有 deps 安装切片: ${DEPS_DIR}/src/neo（无需 --neo-src / neo git）"
   else
-    warn "deps 尚无 src/neo 安装切片。新机应依赖 A 迁盘；仅引导机可用 --neo-src 灌入一次。"
+    warn "deps 尚无 src/neo 安装切片。请使用已预置切片的共享 deps，或用 --neo-src 灌入一次。"
   fi
 
   chmod a+rw "${DEPS_DIR}/manifests/sync_assets.tsv" 2>/dev/null || true

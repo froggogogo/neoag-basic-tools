@@ -54,7 +54,7 @@ install_basic_envs() {
   resolve_mamba_exe
   local neo="${DEPS_DIR}/src/neo"
   if [[ ! -d "$neo" ]]; then
-    die "NO_NEO_SRC" "缺少 ${neo}。请确认 A 迁盘已灌入 deps/src/neo 安装切片，或在引导机用 --neo-src 灌一次（常规安装不必碰 neo git）。"
+    die "NO_NEO_SRC" "缺少 ${neo}。请确认共享 deps 已含 src/neo 安装切片，或用 --neo-src 灌入一次（不必 clone neo 仓库）。"
   fi
 
   ensure_dir "${DEPS_DIR}/packages/conda_pkgs" 1777

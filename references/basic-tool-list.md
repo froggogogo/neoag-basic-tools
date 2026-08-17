@@ -1,8 +1,8 @@
 # basic-tool-list
 
-From `基础版模块、工具和机器.xlsx` plus production closure deps.
+Basic neoantigen tool profile for this installer.
 
-## Excel basic tools
+## Basic tools
 
 | Module | Tool |
 |--------|------|
