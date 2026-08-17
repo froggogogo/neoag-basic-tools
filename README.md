@@ -2,6 +2,8 @@
 
 可移植的新抗原**基础工具链**安装 Skill（A1：单机全量）。版本 **1.3.0**。
 
+同仓库另含 **运行 Skill**：[neoag-basic-tools-run](neoag-basic-tools-run/README.md)（探查机器 → 基础工具 → 生产报告）。
+
 ## 解决的问题
 
 | 旧问题 | 本安装器做法 |
@@ -28,6 +30,7 @@
 
 - [Agent 安装](docs/USAGE_AGENT.md)（可直接复制 Prompt）
 - [人工一键安装](docs/USAGE_MANUAL.md)
+- [基础工具一键运行](neoag-basic-tools-run/README.md)（安装完成后）
 
 ## 一键安装（推荐）
 

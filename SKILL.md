@@ -116,6 +116,7 @@ bash scripts/install.sh --mode verify
 - [README.md](README.md)
 - [docs/USAGE_AGENT.md](docs/USAGE_AGENT.md) — Agent 安装 Prompt
 - [docs/USAGE_MANUAL.md](docs/USAGE_MANUAL.md) — 人工一键安装
+- [neoag-basic-tools-run/SKILL.md](neoag-basic-tools-run/SKILL.md) — 基础工具一键运行 + 生产
 - [references/deps-layout.md](references/deps-layout.md)
 - [references/sync-policy.md](references/sync-policy.md)
 - [references/basic-tool-list.md](references/basic-tool-list.md)
