@@ -17,21 +17,17 @@ discover_conda() {
     :
   fi
 
-  # Explicit user / deps locations first
+  # Explicit user / deps locations first (no legacy zzbnew hardcodes — install only needs deps disk)
   cands+=(
     "${CONDA_DIR:-}/bin/conda"
     "${DEPS_DIR}/software/miniforge3/bin/conda"
+    "/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3/bin/conda"
     "${HOME}/.local/neoag-miniforge3/bin/conda"
     "${HOME}/miniforge3/bin/conda"
     "${HOME}/mambaforge/bin/conda"
     "${HOME}/miniconda3/bin/conda"
     "/opt/miniforge3/bin/conda"
     "/opt/miniconda3/bin/conda"
-    "/mnt/zzbnew/peixunban/gl/miniconda3/bin/conda"
-    "/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3/bin/conda"
-    "/mnt/zzbnew/peixunban/gl/neoag_basic_deps/software/miniforge3/bin/conda"
-    "/home/na/miniforge3/bin/conda"
-    "/root/neo/envs/miniforge3/bin/conda"
     "/root/miniforge3/bin/conda"
     "/root/miniconda3/bin/conda"
   )
