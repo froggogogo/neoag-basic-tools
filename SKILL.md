@@ -97,6 +97,8 @@ bash scripts/install.sh --mode verify
 ## References
 
 - [README.md](README.md)
+- [docs/USAGE_AGENT.md](docs/USAGE_AGENT.md) — Agent 安装 Prompt
+- [docs/USAGE_MANUAL.md](docs/USAGE_MANUAL.md) — 人工一键安装
 - [references/deps-layout.md](references/deps-layout.md)
 - [references/sync-policy.md](references/sync-policy.md)
 - [references/basic-tool-list.md](references/basic-tool-list.md)

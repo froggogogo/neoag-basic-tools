@@ -24,6 +24,11 @@
 - **首次灌库**：能挂载并**可读** `--asset-source`（默认 `/mnt/zjl-bgi-zzb/.../neodata4git`）
 - 基础命令：`bash` `curl` `rsync` `find` `chmod`
 
+## 使用说明
+
+- [Agent 安装](docs/USAGE_AGENT.md)（可直接复制 Prompt）
+- [人工一键安装](docs/USAGE_MANUAL.md)
+
 ## 一键安装（推荐）
 
 在已挂载 neoag_100T + zjl 的机器上：
