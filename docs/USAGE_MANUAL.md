@@ -56,6 +56,9 @@ bash scripts/install.sh --mode verify
 # 只补环境 / 工具脚本（不重拷 refs）
 bash scripts/install.sh --mode envs --yes --with-tool-scripts --prefer-deps-conda
 
+# 已装 1.3：补 Sequenza gold 运行文件 + samtools 1.9 + 重写 site.env
+bash scripts/install.sh --mode envs --yes --prefer-deps-conda
+
 # 旧软链物化（会重拷，慎用）
 bash scripts/install.sh --mode sync --yes --sync-mode copy --force-resync
 ```

@@ -26,11 +26,16 @@ Basic neoantigen tool profile for this installer.
 STAR/samtools, VEP(+cache), pVACtools / MHCflurry, GATK (as needed),
 reference FASTA/GTF/CTAT, and licensed predictors when available.
 
-### Sequenza (fit)
+### Sequenza (pileup + fit)
 
-- Env `neoag-sequenza` must include **`data.table` / `r-data.table`**
-- Fit script should use fread patch when `*.small.seqz.gz` is plain text
-  (see `references/runtime-hardening.md` and `scripts/patches/run_sequenza_fit.fread.R`)
+Gold: sunbinbin 2026-08-17 chrom-split fread (`references/runtime-hardening.md`).
+
+- Env `neoag-sequenza`: **sequenza-utils**, R `sequenza`, **`r-data.table`**
+- Env `neoag-samtools19`: **samtools=1.9** for bam2seqz mpileup (not 1.23)
+- `$DEPS_DIR/tools/sequenza/bam2seqz_nulsafe.py` (NUL in pileup)
+- `$DEPS_DIR/tools/sequenza/run_sequenza_steps.sh`
+- Fit script must contain **`split_seqz_by_chrom`** (not whole-file vroom/`skip=`)
+- GC wiggle under `refs/sequenza/reference/`; FASTA contig style **chr\***
 
 ### MHCflurry (ranking)
 

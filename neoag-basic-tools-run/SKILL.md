@@ -2,11 +2,11 @@
 name: neoag-basic-tools-run
 description: >-
   One-shot neoantigen basic-tools runner with host probe and adaptive
-  parallelism (serial | dual | full). Drives case-local wrappers for HLA,
-  CNV, LOHHLA, short-bulk RNA, SNAF, SpliceMutr, VEP, then calls neoag
-  production_runner for evidence validation and HTML reports. Uses shared
-  neoag-basic-tools-install-deps on neoag_100T. Use when running a prepared
-  case on intranet hosts 66/134/169 or any machine with deps + case scripts.
+  parallelism (serial | dual | full). Drives HLA, CNV (including the
+  sunbinbin Sequenza gold path: NUL-safe bam2seqz + chrom-split fread fit),
+  LOHHLA, short-bulk RNA, SNAF, SpliceMutr, VEP, then neoag production_runner
+  for evidence reports. Uses shared neoag-basic-tools-install-deps. Use when
+  running a prepared case on intranet hosts 66/134/169.
 ---
 
 # NeoAg Basic Tools Run
@@ -61,7 +61,7 @@ bash scripts/run.sh --yes \
 Override: `--sched serial|dual|full`. Thresholds: env
 `MIN_DUAL_NPROC`, `MIN_DUAL_MEM_GB`, `MIN_FULL_NPROC`, `MIN_FULL_MEM_GB`.
 
-Internal queues stay **serial** (sunbinbin): CNV FACETS→Sequenza→PURPLE→ASCAT;
+Internal queues stay **serial** (sunbinbin): CNV FACETS→**Sequenza (builtin gold runner)**→PURPLE→ASCAT;
 HLA OptiType→SpecHLA→HLA-LA; RNA STAR∥STAR-Fusion then downstream waves.
 
 ## Stages (master DAG)

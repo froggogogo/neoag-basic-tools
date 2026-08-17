@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-NEOAG_INSTALL_VERSION="1.3.0"
+NEOAG_INSTALL_VERSION="1.4.0"
 
 log()  { printf '[%s] INFO  %s\n'  "$(date '+%F %T')" "$*"; }
 ok()   { printf '[%s] OK    %s\n'  "$(date '+%F %T')" "$*"; }

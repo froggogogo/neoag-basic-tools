@@ -369,6 +369,21 @@ export POLYSOLVER_HOME="\${NEOAG_BASIC_DEPS_DIR}/refs/lohhla/polysolver"
 export NOVOALIGN_LICENSE_FILE="\${NEOAG_BASIC_DEPS_DIR}/refs/lohhla/novoalign.lic"
 export PURPLE_REF_DIR="\${NEOAG_BASIC_DEPS_DIR}/refs/hmf/purple_reference"
 export SEQUENZA_REF_FASTA="\${NEOAG_BASIC_DEPS_DIR}/refs/sequenza/reference/GRCh38.primary_assembly.chr.fa"
+export SEQUENZA_GC_WIGGLE="\${NEOAG_BASIC_DEPS_DIR}/refs/sequenza/reference/Homo_sapiens.GRCh38.dna.primary_assembly.chr.gc50.wig.gz"
+if [[ ! -s "\${SEQUENZA_GC_WIGGLE}" && -s "\${NEOAG_BASIC_DEPS_DIR}/refs/sequenza/reference/GRCh38.gc50.wig.gz" ]]; then
+  export SEQUENZA_GC_WIGGLE="\${NEOAG_BASIC_DEPS_DIR}/refs/sequenza/reference/GRCh38.gc50.wig.gz"
+fi
+export SEQUENZA_FIT_R="\${NEOAG_BASIC_DEPS_DIR}/src/neo/scripts/run_sequenza_fit.R"
+if [[ ! -f "\${SEQUENZA_FIT_R}" ]]; then
+  export SEQUENZA_FIT_R="\${NEOAG_BASIC_DEPS_DIR}/tools/sequenza/run_sequenza_fit.R"
+fi
+export BAM2SEQZ_WRAP="\${NEOAG_BASIC_DEPS_DIR}/tools/sequenza/bam2seqz_nulsafe.py"
+if [[ -x "\${NEOAG_CONDA_BASE}/envs/neoag-samtools19/bin/samtools" ]]; then
+  export SEQUENZA_SAMTOOLS="\${NEOAG_CONDA_BASE}/envs/neoag-samtools19/bin/samtools"
+elif [[ -x "\${NEOAG_CONDA_BASE}/envs/neoag-sequenza/bin/samtools" ]]; then
+  export SEQUENZA_SAMTOOLS="\${NEOAG_CONDA_BASE}/envs/neoag-sequenza/bin/samtools"
+fi
+export SEQUENZA_BIN="\${NEOAG_CONDA_BASE}/envs/neoag-sequenza/bin"
 export ASCAT_REFERENCE_DIR="\${NEOAG_BASIC_DEPS_DIR}/refs/ascat/reference/WGS_hg38"
 export SALMON_INDEX="\${NEOAG_BASIC_DEPS_DIR}/refs/rna/gencode_v49/salmon_index"
 export SALMON_TX2GENE="\${NEOAG_BASIC_DEPS_DIR}/refs/rna/gencode_v49/tx2gene.tsv"

@@ -3,7 +3,9 @@
 Known runtime pitfalls the installer mitigates (or documents) for the basic
 tool stack.
 
-## 1. Sequenza fit — fake `.gz` + vroom / fread
+## 1. Sequenza — fake `.gz` + chrom-split fread + samtools NUL
+
+Gold path: **sunbinbin 2026-08-17** (`cellularity 0.81 / ploidy 2`, `.fit.done`).
 
 ### Symptoms
 
@@ -11,30 +13,44 @@ tool stack.
 - Raising `VROOM_CONNECTION_SIZE` still fails
 - `gzip -t sample.small.seqz.gz` → **not in gzip format**
 - `file sample.small.seqz.gz` → **ASCII text**
+- `ValueError: embedded null character` in `sequenza.c_pileup` / `do_seqz`
+- `fread` mmap / `skip=` segfault on a ~25G plain `small.seqz`
 
 ### Root cause
 
-`sequenza-utils seqz_binning` sometimes writes **plain TSV** while keeping the
-`.seqz.gz` name. `sequenza::gc.sample.stats` / `read.seqz` use `gzfile` +
-`readr::read_tsv` (vroom), which treat the path as gzip and fail.
+1. `sequenza-utils seqz_binning` sometimes writes **plain TSV** while keeping the
+   `.seqz.gz` name. `sequenza::gc.sample.stats` / `read.seqz` use `gzfile` +
+   `readr::read_tsv` (vroom).
+2. Whole-file `fread(skip=)` on that TSV can mmap-crash. **Split by chromosome**
+   first, then `fread` each chrom with `mmap=FALSE`, `nThread=1`.
+3. samtools **1.23** mpileup can emit NULs; sequenza C parser dies. Use
+   **samtools 1.9** for `-S` plus `bam2seqz_nulsafe.py`.
 
-### Required stack
+### Required stack (installer)
 
-1. Install **`r-data.table`** into `neoag-sequenza` (installer does this).
-2. Patch fit to use **`data.table::fread`** via `assignInNamespace` on
-   `gc.sample.stats` and `read.seqz` (template:
-   `scripts/patches/run_sequenza_fit.fread.R`).
-3. Detect non-gzip magic (`1f 8b`); hardlink/rename to `.seqz` without `.gz`
-   before reading.
-4. Convert chunk results to a **list-matrix** before `unfold_gc`.
-5. Prefer **closures** capturing helpers + `assignInNamespace`; do not assign
-   `environment(fn) <- asNamespace("sequenza")` and then look up free vars
-   from a missing `ns`.
+1. Env `neoag-sequenza`: `sequenza` + `sequenza-utils` + **`r-data.table`**.
+2. Env `neoag-samtools19`: **samtools=1.9** (mpileup only; tabix stays in sequenza env).
+3. Copy into `$DEPS_DIR/tools/sequenza/`:
+   - `bam2seqz_nulsafe.py`
+   - `run_sequenza_steps.sh`
+   - `run_sequenza_fit.R` (chrom-split fread; same as `scripts/patches/run_sequenza_fit.fread.R`)
+4. Patch `$DEPS_DIR/src/neo/scripts/run_sequenza_fit.R` to the chrom-split script.
+5. GC wiggle: `refs/sequenza/reference/*gc50.wig.gz`
+6. FASTA must be **GATK chr\*** contig style (not Ensembl `1,2,10`).
 
-### Apply patch
+### Run
 
 ```bash
-# After source site.env.sh
+source "$DEPS_DIR/configs/site.env.sh"
+export SAMPLE_ID TUMOR_BAM NORMAL_BAM OUTDIR="$CASE_ROOT/sequenza"
+bash "$DEPS_DIR/tools/sequenza/run_sequenza_steps.sh"
+```
+
+Or the run skill CNV stage (`neoag-basic-tools-run/scripts/stages/sequenza.sh`).
+
+### Apply fit patch to an external neo tree
+
+```bash
 bash scripts/apply_sequenza_fit_fread_patch.sh \
   --fit-r /path/to/run_sequenza_fit.R
 ```

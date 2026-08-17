@@ -13,6 +13,8 @@ declare -a VERIFY_MARKERS=(
   "refs/facets/reference/common_snp.hg38.vcf.gz|FACETS SNP VCF|REQUIRED|file"
   "refs/hmf/purple_reference|PURPLE refs|REQUIRED|dir"
   "refs/sequenza/reference/GRCh38.primary_assembly.chr.fa|Sequenza FASTA|REQUIRED|file"
+  "tools/sequenza/bam2seqz_nulsafe.py|Sequenza bam2seqz NUL wrapper|REQUIRED|file"
+  "tools/sequenza/run_sequenza_steps.sh|Sequenza pileup+fit runner|REQUIRED|file"
   "refs/ascat/reference/WGS_hg38|ASCAT WGS refs|REQUIRED|dir"
   "refs/snaf|SNAF refs|REQUIRED|dir"
   "refs/lohhla/polysolver|Polysolver home|OPTIONAL_LICENSED|dir"
@@ -154,6 +156,24 @@ verify_installation() {
     fi
   done
 
+  local gc_wig=""
+  for gc_wig in \
+    "${root}/refs/sequenza/reference/Homo_sapiens.GRCh38.dna.primary_assembly.chr.gc50.wig.gz" \
+    "${root}/refs/sequenza/reference/GRCh38.gc50.wig.gz"
+  do
+    if [[ -s "$gc_wig" ]]; then
+      ok "VERIFY Sequenza GC wiggle: ${gc_wig}"
+      echo -e "${gc_wig}\tSequenza GC wiggle\tREQUIRED\tOK\t-" >>"$report"
+      gc_wig="FOUND"
+      break
+    fi
+  done
+  if [[ "$gc_wig" != "FOUND" ]]; then
+    warn "VERIFY Sequenza GC wiggle missing under refs/sequenza/reference/"
+    echo -e "${root}/refs/sequenza/reference/*.gc50.wig.gz\tSequenza GC wiggle\tREQUIRED\tMISSING\tsync data/sequenza" >>"$report"
+    req_fail=$((req_fail + 1))
+  fi
+
   if [[ "$ext_symlink" -gt 0 ]]; then
     warn "有 ${ext_symlink} 项 refs 仍是指向 deps 外的软链。其它机器若读不到源盘会失败；建议: bash scripts/install.sh --mode sync --yes --sync-mode copy --force-resync"
   fi
@@ -233,6 +253,35 @@ verify_installation() {
         echo -e "r:data.table\tdata.table\tRPKG\tMISSING_PKG\trun ensure_sequenza_datatable / conda install r-data.table" >>"$report"
         req_fail=$((req_fail + 1))
       fi
+      if [[ -x "${sq_dir}/bin/sequenza-utils" ]]; then
+        ok "VERIFY bin: sequenza-utils"
+        echo -e "bin:sequenza-utils\tsequenza-utils\tBIN\tOK\t${sq_dir}/bin/sequenza-utils" >>"$report"
+      else
+        warn "VERIFY bin: sequenza-utils missing in neoag-sequenza"
+        echo -e "bin:sequenza-utils\tsequenza-utils\tBIN\tMISSING\t${sq_dir}" >>"$report"
+        req_fail=$((req_fail + 1))
+      fi
+    fi
+
+    local st19="${CONDA_BASE}/envs/neoag-samtools19/bin/samtools"
+    local st_ok=0
+    if [[ -x "$st19" ]]; then
+      ok "VERIFY samtools 1.9 (neoag-samtools19)"
+      echo -e "bin:samtools19\tsamtools\tBIN\tOK\t${st19}" >>"$report"
+      st_ok=1
+    elif [[ -x "${sq_dir:-}/bin/samtools" ]]; then
+      local stv
+      stv="$("${sq_dir}/bin/samtools" --version 2>/dev/null | awk 'NR==1{print $2}')"
+      if [[ "$stv" == 1.9* ]]; then
+        ok "VERIFY samtools 1.9 (neoag-sequenza ${stv})"
+        echo -e "bin:samtools19\tsamtools\tBIN\tOK\t${sq_dir}/bin/samtools ${stv}" >>"$report"
+        st_ok=1
+      fi
+    fi
+    if [[ "$st_ok" -eq 0 ]]; then
+      warn "VERIFY samtools 1.9 missing — bam2seqz 可用 NUL wrapper + 较新 samtools，但 gold 路径是 1.9"
+      echo -e "bin:samtools19\tsamtools\tBIN\tMISSING\tconda env neoag-samtools19 samtools=1.9" >>"$report"
+      opt_miss=$((opt_miss + 1))
     fi
 
     # MHCflurry models layout (optional for structure, required for ranking)
@@ -263,15 +312,16 @@ verify_installation() {
     req_fail=$((req_fail + 1))
   fi
 
-  # Sequenza fit patch presence in deps neo (soft)
+  # Sequenza chrom-split fread patch (gold: sunbinbin 2026-08-17)
   local fit_r="${DEPS_DIR}/src/neo/scripts/run_sequenza_fit.R"
+  [[ -f "$fit_r" ]] || fit_r="${DEPS_DIR}/tools/sequenza/run_sequenza_fit.R"
   if [[ -f "$fit_r" ]]; then
-    if grep -q 'data.table::fread' "$fit_r" && grep -q 'assignInNamespace' "$fit_r"; then
-      ok "VERIFY sequenza fit fread patch present"
-      echo -e "patch:sequenza_fit_fread\trun_sequenza_fit.R\tPATCH\tOK\t${fit_r}" >>"$report"
+    if grep -q 'split_seqz_by_chrom' "$fit_r" && grep -q 'assignInNamespace' "$fit_r"; then
+      ok "VERIFY sequenza chrom-split fread patch present"
+      echo -e "patch:sequenza_fit_chromsplit\trun_sequenza_fit.R\tPATCH\tOK\t${fit_r}" >>"$report"
     else
-      warn "VERIFY sequenza fit 尚未含 fread 补丁 — 见 apply_sequenza_fit_fread_patch.sh"
-      echo -e "patch:sequenza_fit_fread\trun_sequenza_fit.R\tPATCH\tMISSING\tbash scripts/apply_sequenza_fit_fread_patch.sh --fit-r ${fit_r}" >>"$report"
+      warn "VERIFY sequenza fit 尚未含 chrom-split fread — 见 apply_sequenza_fit_fread_patch.sh"
+      echo -e "patch:sequenza_fit_chromsplit\trun_sequenza_fit.R\tPATCH\tMISSING\tbash scripts/apply_sequenza_fit_fread_patch.sh --fit-r ${fit_r}" >>"$report"
       opt_miss=$((opt_miss + 1))
     fi
   fi

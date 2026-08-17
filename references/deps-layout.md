@@ -7,7 +7,8 @@ Canonical tree under `--deps-dir` (default
 refs/hg38|vep|hla|ctat|rna|easyfuse|facets|hmf|lohhla|ascat|sequenza|snaf|normal|sample_identity
 licenses/predictors/          # netMHCpan, prime, mixMHCpred, bigmhc…
 packages/{installers,conda_pkgs,pip_cache}
-tools/{neodata_tools,EasyFuse,STAR-Fusion,…}
+tools/{neodata_tools,EasyFuse,STAR-Fusion,sequenza,…}
+                              # sequenza/: bam2seqz_nulsafe.py, run_sequenza_steps.sh, chrom-split fit R
 software/miniforge3           # shared conda (--one-shot). First host downloads here;
                               # later hosts reuse envs/; do not install to /home
 configs/site.env.sh           # source this to activate PATH + refs (not a reinstall)

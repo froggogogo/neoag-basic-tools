@@ -101,16 +101,91 @@ ensure_mhcflurry_layout() {
   return 0
 }
 
-# Copy fread fit patch into deps neo tree when present (non-destructive backup).
+sequenza_skill_tools_dir() {
+  echo "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/tools/sequenza"
+}
+
+sequenza_fit_is_chromsplit() {
+  local f="$1"
+  [[ -f "$f" ]] || return 1
+  grep -q 'split_seqz_by_chrom' "$f" 2>/dev/null && grep -q 'assignInNamespace' "$f" 2>/dev/null
+}
+
+# Copy chrom-split fit + bam2seqz wrapper + step runner into deps.
+install_sequenza_runtime_files() {
+  local src dest patch_src
+  src="$(sequenza_skill_tools_dir)"
+  dest="${DEPS_DIR}/tools/sequenza"
+  patch_src="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/patches/run_sequenza_fit.fread.R"
+  ensure_dir "$dest" 775
+  if [[ -f "${src}/bam2seqz_nulsafe.py" ]]; then
+    cp -a "${src}/bam2seqz_nulsafe.py" "${dest}/bam2seqz_nulsafe.py"
+    chmod a+r "${dest}/bam2seqz_nulsafe.py" 2>/dev/null || true
+  fi
+  if [[ -f "${src}/run_sequenza_steps.sh" ]]; then
+    cp -a "${src}/run_sequenza_steps.sh" "${dest}/run_sequenza_steps.sh"
+    chmod a+rx "${dest}/run_sequenza_steps.sh" 2>/dev/null || true
+  fi
+  if [[ -f "$patch_src" ]]; then
+    cp -a "$patch_src" "${dest}/run_sequenza_fit.R"
+    chmod a+r "${dest}/run_sequenza_fit.R" 2>/dev/null || true
+  fi
+  ok "Sequenza 运行文件已写入 ${dest}"
+}
+
+# samtools 1.23 mpileup can emit NULs that crash sequenza-utils c_pileup.
+# Gold path (sunbinbin): dedicated 1.9 binary for bam2seqz -S.
+ensure_sequenza_samtools19() {
+  local prefix="${CONDA_BASE:-${DEPS_DIR}/software/miniforge3}"
+  local dest="${prefix}/envs/neoag-samtools19"
+  local bin="${dest}/bin/samtools"
+  if [[ -x "$bin" ]]; then
+    ok "neoag-samtools19 已存在: $bin"
+    return 0
+  fi
+  # Reuse sequenza env if it already is 1.9
+  local sq="${prefix}/envs/neoag-sequenza/bin/samtools"
+  if [[ -x "$sq" ]]; then
+    local ver
+    ver="$("$sq" --version 2>/dev/null | awk 'NR==1{print $2}')"
+    if [[ "$ver" == 1.9* ]]; then
+      ok "neoag-sequenza samtools 已是 1.9 (${ver})，不另建 neoag-samtools19"
+      return 0
+    fi
+  fi
+  [[ -n "${CONDA_EXE:-}" && -x "${CONDA_EXE}" ]] || {
+    warn "无 conda，跳过 neoag-samtools19（bam2seqz 将回退 sequenza env samtools + NUL wrapper）"
+    return 1
+  }
+  log "创建 neoag-samtools19（samtools=1.9，供 Sequenza bam2seqz mpileup）"
+  ensure_dir "${DEPS_DIR}/logs" 777
+  local ok_install=0
+  if declare -F conda_frontend >/dev/null 2>&1; then
+    if conda_frontend create -y -n neoag-samtools19 -c bioconda -c conda-forge samtools=1.9 \
+        >"${DEPS_DIR}/logs/samtools19_conda.out" 2>"${DEPS_DIR}/logs/samtools19_conda.err"; then
+      ok_install=1
+    fi
+  elif "${CONDA_EXE}" create -y -n neoag-samtools19 -c bioconda -c conda-forge samtools=1.9 \
+      >"${DEPS_DIR}/logs/samtools19_conda.out" 2>"${DEPS_DIR}/logs/samtools19_conda.err"; then
+    ok_install=1
+  fi
+  if [[ "$ok_install" -eq 1 && -x "$bin" ]]; then
+    ok "neoag-samtools19 安装成功: $bin"
+    return 0
+  fi
+  warn "neoag-samtools19 安装失败，见 ${DEPS_DIR}/logs/samtools19_conda.err"
+  return 1
+}
+
+# Copy chrom-split fread fit patch into deps neo tree when present.
 maybe_patch_deps_sequenza_fit() {
   local fit_r="${DEPS_DIR}/src/neo/scripts/run_sequenza_fit.R"
   local patch_src
   patch_src="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/patches/run_sequenza_fit.fread.R"
-  [[ -f "$fit_r" ]] || return 0
   [[ -f "$patch_src" ]] || return 0
 
-  if grep -q 'data.table::fread' "$fit_r" 2>/dev/null && grep -q 'assignInNamespace' "$fit_r" 2>/dev/null; then
-    ok "deps neo run_sequenza_fit.R 已含 fread 补丁"
+  if sequenza_fit_is_chromsplit "$fit_r"; then
+    ok "deps neo run_sequenza_fit.R 已含 chrom-split fread 补丁"
     return 0
   fi
 
@@ -119,13 +194,19 @@ maybe_patch_deps_sequenza_fit() {
     return 0
   fi
 
-  cp -a "$fit_r" "${fit_r}.bak_pre_fread_$(date +%Y%m%d_%H%M%S)"
+  if [[ -f "$fit_r" ]]; then
+    cp -a "$fit_r" "${fit_r}.bak_pre_chromsplit_$(date +%Y%m%d_%H%M%S)"
+  else
+    ensure_dir "$(dirname "$fit_r")" 775
+  fi
   cp -a "$patch_src" "$fit_r"
-  ok "已将 fread Sequenza fit 补丁写入 ${fit_r}"
+  ok "已将 chrom-split Sequenza fit 补丁写入 ${fit_r}"
 }
 
 apply_runtime_hardening() {
   ensure_sequenza_datatable || true
-  ensure_mhcflurry_layout || true
+  ensure_sequenza_samtools19 || true
+  install_sequenza_runtime_files || true
   maybe_patch_deps_sequenza_fit || true
+  ensure_mhcflurry_layout || true
 }

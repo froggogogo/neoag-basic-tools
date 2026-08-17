@@ -11,6 +11,7 @@ Gold case（最完整）：
 | sunbinbin 脚本 | stage | 说明 |
 |----------------|-------|------|
 | `scripts/run_cnv_hla_parallel_sunbinbin.sh` | hla + cnv | `RUN_CNV=0 RUN_HLA=1` 或反之可拆分 |
+| `scripts/run_sequenza_steps.sh` | sequenza | 运行 skill **优先用** `$DEPS_DIR/tools/sequenza/` 的 gold 副本（chrom-split fit + NUL-safe bam2seqz）；病例脚本仅作 fallback |
 | `scripts/run_lohhla_sunbinbin.sh` | lohhla | 需 HLA + purity |
 | `short-rna/scripts/run_short_rna_all_sunbinbin.sh` | rna | wave1–5 + evidence |
 | `short-rna/scripts/run_snaf_*` / case snaf | snaf | junction → 候选 |

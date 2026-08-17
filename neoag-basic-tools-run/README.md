@@ -2,12 +2,12 @@
 
 新抗原**基础工具一键运行** Skill，与 [neoag-basic-tools-install](../README.md) 同仓库。
 
-版本 **1.0.0**。调度参考 **sunbinbin**（66/134/169 上最完整病例）。
+版本 **1.1.0**。调度参考 **sunbinbin**（66/134/169 上最完整病例）。 Sequenza 使用 2026-08-17 跑通的 chrom-split + NUL-safe bam2seqz，不依赖病例自带旧 fit。
 
 ## 做什么
 
 1. **探查机器**：核数、内存 → `serial` | `dual` | `full`
-2. **跑基础工具**：HLA、CNV、LOHHLA、短读 RNA、SNAF、SpliceMutr、VEP
+2. **跑基础工具**：HLA、CNV（含内置 Sequenza）、LOHHLA、短读 RNA、SNAF、SpliceMutr、VEP
 3. **生产接口**：汇总证据 → `evidence_report*.html`
 
 ## 前置
@@ -67,6 +67,17 @@ bash scripts/run.sh --yes \
 | `--skip-production` | 只跑基础工具 |
 | `--force` | 忽略 `.done` |
 | `--mode probe\|plan\|run` | 探查 / 计划 / 运行 |
+
+## Sequenza（内置）
+
+CNV 队列会调用 `scripts/stages/sequenza.sh`：
+
+- pileup：按染色体 `bam2seqz_nulsafe.py`（samtools **1.9**）→ merge → `seqz_binning`
+- fit：chrom-split `fread`（`mmap=FALSE`），产物 `sequenza/sequenza_fit/*.sequenza_summary.tsv`
+- 已有 `.fit.done` 则跳过；`--force` 重跑
+- 优先 `$DEPS_DIR/tools/sequenza/run_sequenza_steps.sh`，否则用本 skill 自带副本
+
+需要 `--tumor-bam` / `--normal-bam`（或病例 `run_sequenza_steps.sh`）。
 
 ## 产物
 

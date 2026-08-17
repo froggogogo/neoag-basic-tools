@@ -5,11 +5,12 @@ description: >-
   Creates a centralized dependency tree on neoag_100T (default under
   majiaxin/neoag-basic-tools-install-deps), discovers or installs Conda
   without hardcoding machine paths, syncs refs/licenses/tools (default copy
-  into deps), ensures SpliceMutr genome R packages, Sequenza r-data.table +
-  fread fit patch, MHCflurry path layout, and VEP Perl isolation; verifies
-  readability plus env smoke tests. Use when installing neoantigen basic
-  tools or setting up neoag-basic-tools-install-deps on any intranet host
-  that mounts neoag_100T. zjl is only needed if shared deps are still missing.
+  into deps), ensures SpliceMutr genome R packages, Sequenza chrom-split
+  fread fit plus bam2seqz NUL wrapper and samtools 1.9, MHCflurry path layout,
+  and VEP Perl isolation; verifies readability plus env smoke tests. Use when
+  installing neoantigen basic tools or setting up neoag-basic-tools-install-deps
+  on any intranet host that mounts neoag_100T. zjl is only needed if shared
+  deps are still missing.
 ---
 
 # NeoAg Basic Tools Install
@@ -35,7 +36,7 @@ bash scripts/install.sh --mode install --one-shot --yes
 - `--with-envs` + `--with-tool-scripts`
 - `--prefer-deps-conda`：Conda/envs 优先落在 `$DEPS_DIR/software/miniforge3`
 - 安装后自动 `--mode verify`
-- **运行期加固**：`r-data.table`、MHCflurry 布局、Sequenza fit fread 补丁
+- **运行期加固**：`r-data.table`、Sequenza chrom-split fit、`bam2seqz_nulsafe`、samtools 1.9、MHCflurry 布局
 - **环境创建优先 mamba**；无 mamba 时回退 conda
 
 ## Runtime hardening
@@ -44,7 +45,8 @@ See [references/runtime-hardening.md](references/runtime-hardening.md). Summary:
 
 | Issue | Installer action |
 |-------|------------------|
-| Sequenza fit vroom / fake `.gz` | `ensure_sequenza_datatable` + `scripts/patches/run_sequenza_fit.fread.R` |
+| Sequenza fit vroom / fake `.gz` / mmap crash | chrom-split fread：`scripts/patches/run_sequenza_fit.fread.R` + `r-data.table` |
+| Sequenza bam2seqz NUL (`samtools` 1.23) | `tools/sequenza/bam2seqz_nulsafe.py` + env `neoag-samtools19` |
 | MHCflurry missing / wrong path | `ensure_mhcflurry_layout`；`site.env` 设 `MHCFLURRY_DATA_DIR` |
 | VEP Perl 串台（miniconda） | `source site.env.sh` 后调用 `neoag_use_vep_perl` |
 | 外部 fit 脚本尚未打补丁 | `bash scripts/apply_sequenza_fit_fread_patch.sh --fit-r /path/to/run_sequenza_fit.R` |

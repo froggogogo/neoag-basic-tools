@@ -1,6 +1,6 @@
 # neoag-basic-tools-install
 
-可移植的新抗原**基础工具链**安装 Skill（A1：单机全量）。版本 **1.3.0**。
+可移植的新抗原**基础工具链**安装 Skill（A1：单机全量）。版本 **1.4.0**。
 
 同仓库另含 **运行 Skill**：[neoag-basic-tools-run](neoag-basic-tools-run/README.md)（探查机器 → 基础工具 → 生产报告）。
 
@@ -13,7 +13,7 @@
 | 硬编码路径 | 全部由 `--deps-dir` / `site.env.sh` 参数化 |
 | 软链源盘不可读 | **默认 copy**；symlink 会做可读性探测；可 `--force-resync` 物化 |
 | SpliceMutr 缺基因组包 | 自动确保 `BSgenome.Hsapiens.UCSC.hg38` + verify 冒烟 |
-| Sequenza fit vroom / 假 `.gz` | `r-data.table` + fread fit 补丁（`assignInNamespace`） |
+| Sequenza fit vroom / 假 `.gz` / mmap | chrom-split fread + `r-data.table`；`bam2seqz_nulsafe` + samtools 1.9 |
 | MHCflurry 路径 `4/2.0.0` vs `2.0.0` | layout shim + `MHCFLURRY_DATA_DIR` |
 | VEP Perl 与系统 miniconda 串台 | `neoag_use_vep_perl` 隔离 `PERL5LIB` |
 | conda env 创建慢 | **优先 mamba** `env create` / `install`，无则回退 conda |
@@ -115,12 +115,12 @@ neoag-basic-tools-install-deps/
 
 ## 验收内容（verify）
 
-- 关键 refs **存在且当前用户可读**（含 Sequenza FASTA、SNAF、ASCAT 等）
+- 关键 refs **存在且当前用户可读**（含 Sequenza FASTA、GC wiggle、SNAF、ASCAT 等）
 - 若仍是指向 deps 外的软链：报告 `OK_EXTERNAL_SYMLINK` 并警告
-- 基础 conda env：`tools/fusion/splice/splicemutr/sequenza/vep/gatk`
+- 基础 conda env：`tools/fusion/splice/splicemutr/sequenza/vep/gatk`（另：`neoag-samtools19` 软项）
 - R 冒烟：`BSgenome`、`BSgenome.Hsapiens.UCSC.hg38`、`sequenza`、`data.table`
+- Sequenza：`sequenza-utils`、`tools/sequenza/bam2seqz_nulsafe.py`、chrom-split fit 补丁
 - MHCflurry models 布局（软警告）
-- Sequenza fit fread 补丁是否写入 deps neo（软警告）
 - EasyFuse：仅 Ubuntu 22.04 记为 SUPPORTED
 
 报告：`$DEPS_DIR/manifests/verify_report.tsv`

@@ -33,8 +33,15 @@
 
 ### CNV
 
-FACETS → Sequenza → PURPLE → ASCAT  
-产物：`evidence/purity.tsv`、`evidence/cnv_segments.tsv`
+FACETS → **Sequenza（内置 gold runner）** → PURPLE → ASCAT  
+
+Sequenza 不依赖病例旧 `run_sequenza_fit.R`：
+
+1. `bam2seqz_nulsafe.py` + samtools 1.9（避免 1.23 NUL）
+2. merge + `seqz_binning`（`.small.seqz.gz` 可能是明文 TSV）
+3. chrom-split fread fit → `sequenza_fit/${sample}.sequenza_summary.tsv`
+
+产物：`evidence/purity.tsv`、`evidence/cnv_segments.tsv`、`sequenza/.fit.done`
 
 ### HLA
 

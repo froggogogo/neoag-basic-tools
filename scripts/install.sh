@@ -185,7 +185,7 @@ run_install() {
       log "跳过 neo install_*.sh（需要时加 --with-tool-scripts 或 --one-shot）"
     fi
 
-    log "应用运行期加固（Sequenza data.table / MHCflurry layout / fit 补丁）"
+    log "应用运行期加固（Sequenza chrom-split / samtools 1.9 / MHCflurry / fit 补丁）"
     apply_runtime_hardening || true
 
     set +e
@@ -250,6 +250,7 @@ main() {
         run_tool_installers
       fi
       apply_runtime_hardening || true
+      render_site_env
       ;;
     verify)
       print_plan

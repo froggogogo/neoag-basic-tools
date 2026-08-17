@@ -2,7 +2,7 @@
 # Shared helpers for neoag-basic-tools-run
 set -euo pipefail
 
-NEOAG_RUN_VERSION="1.0.0"
+NEOAG_RUN_VERSION="1.1.0"
 DEFAULT_DEPS_DIR="/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps"
 
 log()  { printf '[%s] INFO  %s\n'  "$(date '+%F %T')" "$*"; }
