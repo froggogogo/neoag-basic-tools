@@ -362,10 +362,8 @@ neoag_export_production_predictors() {
 
   picked="$(neoag_pick_pred_dir "/Linux_x86_64/bin/netMHCstabpan" \
     "${pred}/netMHCstabpan" || true)"
-  if [[ -n "${picked}" ]]; then
-    export NETMHCSTABPAN_HOME="${picked}"
-    export NETMHCSTABPAN_BIN="${NETMHCSTABPAN_HOME}/netMHCstabpan"
-  fi
+  export NETMHCSTABPAN_HOME="${picked:-${pred}/netMHCstabpan}"
+  export NETMHCSTABPAN_BIN="${NETMHCSTABPAN_HOME}/netMHCstabpan"
 
   export NEOAG_PRIME_BIN="${PRIME_HOME}/PRIME"
   export MIXMHCPRED_BIN="${MIXMHCPRED_HOME}/MixMHCpred"

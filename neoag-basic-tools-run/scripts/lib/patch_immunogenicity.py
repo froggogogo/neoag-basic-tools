@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Patch neo sarcoma profiles so production runs PRIME, BigMHC-IM, DeepImmuno, IEDB."""
+"""Patch neo sarcoma profiles with IEDB fallback-only immunogenicity."""
 
 from __future__ import annotations
 
@@ -12,15 +12,14 @@ from pathlib import Path
 
 IMMUNO_BLOCK = """[immunogenicity]
 enabled = true
-sources = ["prime", "bigmhc_im", "deepimmuno", "iedb"]
+sources = ["prime", "bigmhc_im", "deepimmuno"]
 composite = "mean"
-use_iedb_fallback = false
+use_iedb_fallback = true
 
 [immunogenicity.weights]
 prime = 0.35
 bigmhc_im = 0.35
-deepimmuno = 0.15
-iedb = 0.15
+deepimmuno = 0.30
 """
 
 SECTION_RE = re.compile(

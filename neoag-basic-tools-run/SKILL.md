@@ -75,7 +75,7 @@ HLA OptiType→SpecHLA→HLA-LA; RNA Salmon→**EasyFuse**（STAR/Arriba/STAR-Fu
    genomic start≤end** (SNAF coord may be donor–acceptor order).
 5. **VEP** (optional if `--somatic-vcf` set)
 6. **production** — overlay neo `tools.env.local.sh` + sarcoma immunogenicity
-   sources（PRIME / BigMHC-IM / DeepImmuno / IEDB），呈递含
+   sources（PRIME / BigMHC-IM / DeepImmuno；IEDB 仅 NetMHCpan 失败时兜底），呈递含
    NetMHCpan / MHCflurry / **NetMHCstabpan（DTU 本地，必跑；缺树则失败）** / NetChop，再
    `generate_production_from_results_manifest.py` +
    `python -m neoag.production_runner --execute`

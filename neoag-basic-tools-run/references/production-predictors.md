@@ -6,7 +6,7 @@ sunbinbin `production_from_results_manifest_20260814` 曾出现：
 |------|------------|------|
 | BigMHC-IM | missing | `BIGMHC_DIR` 指到 liup，只有 `models/`，没有 `src/predict.py` |
 | DeepImmuno | not_used | sarcoma profile `sources` 未列入 |
-| IEDB | not_used | sarcoma profile `use_iedb_fallback=false` 且 sources 无 iedb |
+| IEDB | fallback_only | 仅在 NetMHCpan 本地执行失败时兜底启用（`use_iedb_fallback=true`） |
 | MixMHCpred | 无独立条目 | 不是独立 immunogenicity source；PRIME 用 `-mix MixMHCpred` 调用 |
 | NetMHCstabpan | 曾被 `--skip-netmhcstabpan` 关掉 | 默认必须跑；指向 DTU 树 `Linux_x86_64/bin` + `data/`，不要用 IEDB Python shim |
 
@@ -22,7 +22,8 @@ sunbinbin `production_from_results_manifest_20260814` 曾出现：
 
 1. 把 `configs/tools.env.local.sh` 写到 `$NEO_ROOT/conf/tools.env.local.sh`
 2. 把 sarcoma profile 的 `[immunogenicity].sources` 设为
-   `prime, bigmhc_im, deepimmuno, iedb`（权重 0.35 / 0.35 / 0.15 / 0.15）
+   `prime, bigmhc_im, deepimmuno`（权重 0.35 / 0.35 / 0.30），并开启
+   `use_iedb_fallback=true`（仅 NetMHCpan 失败时启用 IEDB）
 
 IEDB 是 neo 仓库内 Python 打分，没有授权二进制。MixMHCpred 仍通过 PRIME 跑，但 `MIXMHCPRED_BIN` 必须可执行。
 

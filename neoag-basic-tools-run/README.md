@@ -8,7 +8,7 @@
 
 1. **探查机器**：核数、内存 → `serial` | `dual` | `full`
 2. **跑基础工具**：HLA、CNV（含内置 Sequenza）、LOHHLA、短读 RNA、SNAF、SpliceMutr、VEP
-3. **生产接口**：overlay neo 预测器路径 + sarcoma immunogenicity（PRIME / BigMHC-IM / DeepImmuno / IEDB）+ **NetMHCstabpan（DTU 必跑）** → `evidence_report*.html`
+3. **生产接口**：overlay neo 预测器路径 + sarcoma immunogenicity（PRIME / BigMHC-IM / DeepImmuno；IEDB 仅 NetMHCpan 失败时兜底）+ **NetMHCstabpan（DTU 必跑）** → `evidence_report*.html`
 
 ## 前置
 
