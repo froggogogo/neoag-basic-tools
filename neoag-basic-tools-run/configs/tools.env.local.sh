@@ -39,11 +39,9 @@ export NETCHOP_BIN="${NEOAG_NETCHOP_BIN}"
 
 _stab="$(_neoag_pick "/Linux_x86_64/bin/netMHCstabpan" \
   "${_NEOAG_PRED_DEPS}/netMHCstabpan" || true)"
-if [[ -n "${_stab}" ]]; then
-  export NETMHCSTABPAN_HOME="${_stab}"
-  export NETMHCSTABPAN_BIN="${NETMHCSTABPAN_HOME}/netMHCstabpan"
-  export PATH="${NETMHCSTABPAN_HOME}:${PATH:-}"
-fi
+export NETMHCSTABPAN_HOME="${_stab:-${_NEOAG_PRED_DEPS}/netMHCstabpan}"
+export NETMHCSTABPAN_BIN="${NETMHCSTABPAN_HOME}/netMHCstabpan"
+export PATH="${NETMHCSTABPAN_HOME}:${PATH:-}"
 
 if [[ -n "${NEOAG_CONDA_BASE:-}" ]]; then
   export BIGMHC_PYTHON="${NEOAG_CONDA_BASE}/envs/neoag-tools/bin/python"

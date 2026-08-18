@@ -26,11 +26,9 @@ sunbinbin `production_from_results_manifest_20260814` 曾出现：
 
 IEDB 是 neo 仓库内 Python 打分，没有授权二进制。MixMHCpred 仍通过 PRIME 跑，但 `MIXMHCPRED_BIN` 必须可执行。
 
-NetMHCstabpan：`generate_production_from_results_manifest.py` **不要**传 `--skip-netmhcstabpan`。
-`NETMHCSTABPAN_HOME` 必须是 `$DEPS_DIR/licenses/predictors/netMHCstabpan` 下的完整 DTU 树
-（sentinel `Linux_x86_64/bin/netMHCstabpan` + `data/`）。
+NetMHCstabpan：运行 skill **必须**跑。generate **不得**传 `--skip-netmhcstabpan`。
+`NETMHCSTABPAN_HOME=$DEPS_DIR/licenses/predictors/netMHCstabpan`
+（sentinel `Linux_x86_64/bin/netMHCstabpan` + `data/`）。缺树则 `production.sh` 以 `NO_NETMHCSTABPAN` 失败，不走 IEDB shim。
 
 三台机调优与 skill 独立：机上继续用各自原来的盘；调好后再**复制**进 neoag_100T。
-安装 / 运行 skill **只读** neoag_100T，不软链、不回退 zzbnew / zjl / liup。
-
-紧急跳过：`SKIP_NETMHCSTABPAN=1`。
+安装 / 运行 skill **只读** neoag_100T。

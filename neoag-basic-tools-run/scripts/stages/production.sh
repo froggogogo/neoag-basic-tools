@@ -56,8 +56,6 @@ add_if --spechla-loh "$CASE/evidence/hla_loh.spechla.tsv"
 add_if --expression "$CASE/short-rna/evidence/gene_expression.tsv"
 add_if --transcript-expression "$CASE/short-rna/evidence/transcript_quant.sf"
 add_if --easyfuse "$CASE/short-rna/evidence/easyfuse.fusions.pass.csv"
-add_if --star-fusion "$CASE/short-rna/evidence/star-fusion.fusion_predictions.tsv"
-add_if --arriba "$CASE/short-rna/evidence/arriba.fusions.tsv"
 add_if --junctions "$CASE/short-rna/evidence/regtools_junctions.tsv"
 add_if --snaf "$CASE/short-rna/snaf/snaf_candidates.tsv"
 add_if --splicemutr "$CASE/short-rna/splicemutr"
@@ -73,12 +71,14 @@ add_if --netchop-home "$NETCHOP_HOME_DIR"
 
 PROFILE="${NEO_ROOT}/profiles/sarcoma_rna_supported_v2_provisional.toml"
 [[ -f "$PROFILE" ]] && args+=(--profile "$PROFILE")
-# NetMHCstabpan is required. Only skip when the DTU tree is missing AND the
-# operator explicitly sets SKIP_NETMHCSTABPAN=1.
-if [[ "${SKIP_NETMHCSTABPAN:-0}" == "1" ]]; then
-  args+=(--skip-netmhcstabpan)
-  warn "SKIP_NETMHCSTABPAN=1 — presentation_predictors 不含 netmhcstabpan"
-fi
+
+# Skill only uses neoag_100T. Do not inherit a machine-local NETMHCSTABPAN_HOME.
+STABPAN_HOME="${DEPS}/licenses/predictors/netMHCstabpan"
+STABPAN_BIN="${STABPAN_HOME}/Linux_x86_64/bin/netMHCstabpan"
+[[ -x "$STABPAN_BIN" && -d "${STABPAN_HOME}/data" ]] || die "NO_NETMHCSTABPAN" \
+  "运行 skill 必须跑 NetMHCstabpan。缺少 DTU 树: ${STABPAN_BIN}（需要 Linux_x86_64/bin + data/，在 neoag_100T licenses/predictors/netMHCstabpan）。"
+export NETMHCSTABPAN_HOME="${STABPAN_HOME}"
+export NETMHCSTABPAN_BIN="${STABPAN_HOME}/netMHCstabpan"
 
 log "generate production manifest -> ${OUT}/manifest/production.results.toml"
 "$PY" "$GEN" "${args[@]}"
@@ -109,8 +109,8 @@ export MIXMHCPRED_BIN="${MIXMHCPRED_BIN:-${MIXMHCPRED_HOME}/MixMHCpred}"
 export BIGMHC_PYTHON="${BIGMHC_PYTHON:-${NEOAG_CONDA_BASE}/envs/neoag-tools/bin/python}"
 export NEOAG_NETCHOP_BIN="${NEOAG_NETCHOP_BIN:-${NETCHOP_BIN:-${DEPS}/licenses/predictors/netchop/netchop-3.1/Linux_x86_64/bin/netChop}}"
 export NETCHOP_HOME="${NETCHOP_HOME:-${NETCHOP_HOME_DIR:-${DEPS}/licenses/predictors/netchop/netchop-3.1}}"
-export NETMHCSTABPAN_HOME="${NETMHCSTABPAN_HOME:-${DEPS}/licenses/predictors/netMHCstabpan}"
-export NETMHCSTABPAN_BIN="${NETMHCSTABPAN_BIN:-${NETMHCSTABPAN_HOME}/netMHCstabpan}"
+export NETMHCSTABPAN_HOME="${DEPS}/licenses/predictors/netMHCstabpan"
+export NETMHCSTABPAN_BIN="${NETMHCSTABPAN_HOME}/netMHCstabpan"
 export PATH="${NEOAG_CONDA_BASE}/bin:${NEOAG_CONDA_BASE}/envs/neoag-tools/bin:${NETMHCPAN_HOME}:${NETMHCSTABPAN_HOME}:${PRIME_HOME}:${MIXMHCPRED_HOME}:${PATH:-}"
 
 if [[ -f "${DEPS}/configs/site.env.sh" ]]; then
@@ -120,6 +120,11 @@ fi
 if type neoag_use_vep_perl >/dev/null 2>&1; then
   neoag_use_vep_perl
 fi
+
+# Re-pin after site.env / overlay so machine-local HOME cannot leak in.
+export NETMHCSTABPAN_HOME="${DEPS}/licenses/predictors/netMHCstabpan"
+export NETMHCSTABPAN_BIN="${NETMHCSTABPAN_HOME}/netMHCstabpan"
+export PATH="${NETMHCSTABPAN_HOME}:${PATH:-}"
 
 log "neoag.production_runner --execute"
 PYTHONPATH="${NEO_ROOT}/src${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m neoag.production_runner \

@@ -25,7 +25,7 @@ REASON="nproc=${NPROC} mem_gb=${MEM_GB} below dual (${MIN_DUAL_NPROC}c/${MIN_DUA
 
 if [[ "$NPROC" -ge "$MIN_FULL_NPROC" && "$MEM_GB" -ge "$MIN_FULL_MEM_GB" ]]; then
   MODE="full"
-  REASON="nproc=${NPROC}>=${MIN_FULL_NPROC} and mem_gb=${MEM_GB}>=${MIN_FULL_MEM_GB}: DNA (CNV||HLA) ∥ RNA STAR waves"
+  REASON="nproc=${NPROC}>=${MIN_FULL_NPROC} and mem_gb=${MEM_GB}>=${MIN_FULL_MEM_GB}: DNA (CNV||HLA) ∥ RNA EasyFuse wave"
 elif [[ "$NPROC" -ge "$MIN_DUAL_NPROC" && "$MEM_GB" -ge "$MIN_DUAL_MEM_GB" ]]; then
   MODE="dual"
   REASON="nproc=${NPROC}>=${MIN_DUAL_NPROC} and mem_gb=${MEM_GB}>=${MIN_DUAL_MEM_GB}: CNV||HLA; RNA after DNA HLA"
@@ -66,5 +66,5 @@ reason:        ${REASON}
 ==================================================
 serial = all basic tools one-by-one
 dual   = CNV queue ∥ HLA queue; RNA after HLA
-full   = (CNV ∥ HLA) ∥ RNA STAR/fusion waves; SNAF/SpliceMutr wait HLA
+full   = (CNV ∥ HLA) ∥ RNA (Salmon→EasyFuse); SNAF/SpliceMutr wait HLA
 EOF

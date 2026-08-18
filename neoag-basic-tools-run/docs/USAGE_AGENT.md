@@ -34,6 +34,7 @@
 - EasyFuse 仅 Ubuntu 22.04
 - 生产必须用完整 neo（--neo-root），不是 deps/src/neo
 - 生产须启用 PRIME + BigMHC-IM + DeepImmuno + IEDB；MixMHCpred 作为 PRIME 依赖
+- 生产必须跑 NetMHCstabpan（DTU 本地：`$DEPS_DIR/licenses/predictors/netMHCstabpan`）。缺 `Linux_x86_64/bin` + `data/` 则失败，禁止 `--skip-netmhcstabpan`
 - BigMHC 必须有 src/predict.py，不要用只有 models/ 的不完整目录
 ```
 
@@ -41,5 +42,5 @@
 
 1. `bash scripts/probe_host.sh --json`
 2. case 下是否存在 `run_cnv_hla_parallel` 或 `run_hla_all` + `run_cnv_all`
-3. `short-rna/scripts/run_short_rna_all*` + `inputs.env.sh`
+3. `short-rna/scripts/run_salmon_*` / `run_easyfuse_*` / `run_regtools_*` 等 + `inputs.env.sh`（融合仅 EasyFuse，不需单独 STAR/Arriba/SF/FC）
 4. `--neo-root/scripts/generate_production_from_results_manifest.py` 存在

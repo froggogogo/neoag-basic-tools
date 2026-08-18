@@ -25,7 +25,7 @@ sample, then **production** (evidence + reports). Schedule follows **sunbinbin**
 2. `source $DEPS_DIR/configs/site.env.sh`
 3. **Case directory** with per-sample wrappers (copy/adapt from sunbinbin), e.g.:
    - `scripts/run_cnv_hla_parallel_*.sh` or separate `run_hla_all` / `run_cnv_all`
-   - `short-rna/scripts/run_short_rna_all_*.sh` + `short-rna/inputs.env.sh`
+   - `short-rna/scripts/run_*` per-tool wrappers + `short-rna/inputs.env.sh`（融合仅 `run_easyfuse_*`，不需单独 STAR/Arriba/SF/FC）
    - optional: `run_lohhla`, `run_snaf`, `run_splicemutr_patient`, `run_vep_somatic`
 4. **Production** needs a **full neo repo** (`--neo-root`), not install slice
    `$DEPS_DIR/src/neo`.
@@ -57,13 +57,13 @@ bash scripts/run.sh --yes \
 |------|-----|-----|-----|
 | **serial** | &lt;12 | &lt;48G | HLA → CNV → RNA → … |
 | **dual** | ≥12 | ≥48G | (HLA queue ∥ CNV queue) → RNA → … |
-| **full** | ≥20 | ≥96G | (HLA ∥ CNV) ∥ RNA wave1 → … |
+| **full** | ≥20 | ≥96G | (HLA ∥ CNV) ∥ RNA（Salmon→EasyFuse）→ … |
 
 Override: `--sched serial|dual|full`. Thresholds: env
 `MIN_DUAL_NPROC`, `MIN_DUAL_MEM_GB`, `MIN_FULL_NPROC`, `MIN_FULL_MEM_GB`.
 
 Internal queues stay **serial** (sunbinbin): CNV FACETS→**Sequenza (builtin gold runner)**→PURPLE→ASCAT;
-HLA OptiType→SpecHLA→HLA-LA; RNA STAR∥STAR-Fusion then downstream waves.
+HLA OptiType→SpecHLA→HLA-LA; RNA Salmon→**EasyFuse**（STAR/Arriba/STAR-Fusion/FusionCatcher 在 EasyFuse 内，不单独跑）→ RegTools→RSEM.
 
 ## Stages (master DAG)
 
@@ -76,7 +76,7 @@ HLA OptiType→SpecHLA→HLA-LA; RNA STAR∥STAR-Fusion then downstream waves.
 5. **VEP** (optional if `--somatic-vcf` set)
 6. **production** — overlay neo `tools.env.local.sh` + sarcoma immunogenicity
    sources（PRIME / BigMHC-IM / DeepImmuno / IEDB），呈递含
-   NetMHCpan / MHCflurry / **NetMHCstabpan（DTU 本地，默认必跑）** / NetChop，再
+   NetMHCpan / MHCflurry / **NetMHCstabpan（DTU 本地，必跑；缺树则失败）** / NetChop，再
    `generate_production_from_results_manifest.py` +
    `python -m neoag.production_runner --execute`
 

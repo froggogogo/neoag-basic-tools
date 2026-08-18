@@ -24,7 +24,7 @@ bash scripts/probe_host.sh
 
 - `--tumor-bam` / `--normal-bam`（内置 Sequenza；不必再依赖病例旧 fit 脚本）
 - `scripts/run_hla_all_*` 或 `run_cnv_hla_parallel_*`（HLA / 其它 CNV）
-- `short-rna/scripts/run_short_rna_all_*` + `short-rna/inputs.env.sh`
+- `short-rna/scripts/run_salmon_*`、`run_easyfuse_*`、`run_regtools_*` 等 per-tool wrapper + `short-rna/inputs.env.sh`
 
 可选：`run_lohhla_*`、`run_snaf_*`、`run_splicemutr_patient_*`、`run_vep_somatic_*`
 

@@ -8,7 +8,7 @@
 
 1. **探查机器**：核数、内存 → `serial` | `dual` | `full`
 2. **跑基础工具**：HLA、CNV（含内置 Sequenza）、LOHHLA、短读 RNA、SNAF、SpliceMutr、VEP
-3. **生产接口**：overlay neo 预测器路径 + sarcoma immunogenicity（PRIME / BigMHC-IM / DeepImmuno / IEDB）→ `evidence_report*.html`
+3. **生产接口**：overlay neo 预测器路径 + sarcoma immunogenicity（PRIME / BigMHC-IM / DeepImmuno / IEDB）+ **NetMHCstabpan（DTU 必跑）** → `evidence_report*.html`
 
 ## 前置
 
@@ -51,7 +51,7 @@ bash scripts/run.sh --yes \
 |------|------------------|------|
 | serial | &lt;12 核 或 &lt;48G | 全部串行 |
 | dual | ≥12 核且 ≥48G | CNV 队列 ∥ HLA 队列；RNA 在 DNA 之后 |
-| full | ≥20 核且 ≥96G | (CNV∥HLA) 与 RNA STAR 波同时开 |
+| full | ≥20 核且 ≥96G | (CNV∥HLA) 与 RNA（Salmon→EasyFuse）同时开 |
 
 队列**内部**仍串行（与 sunbinbin 一致）。详见 [references/schedule.md](references/schedule.md)。
 
