@@ -27,17 +27,21 @@ Miniforge 与 env 落在共享盘：
 要求：
 1. 确认已挂载 /mnt/neoag_100T，且目录可读：
    /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps
-2. 若本机还没有本 skill，克隆仓库（根目录即本 skill）：
-   git clone git@github.com:froggogogo/neoag-skills.git neoag-basic-tools-install
-   cd neoag-basic-tools-install
+2. 若本机还没有本 skill，克隆仓库后进入安装目录（不要用运行 Skill 目录）：
+   git clone git@github.com:froggogogo/neoag-skills.git
+   cd neoag-skills/neoag-basic-tools-install
 3. 先执行：
    bash scripts/install.sh --mode plan
    检查 plan 输出：deps-dir、asset-source、neo 安装切片（$DEPS_DIR/src/neo）是否就绪。
 4. 再执行一键安装（不要加 --force-resync，避免重拷已有 refs）：
    bash scripts/install.sh --mode install --one-shot --yes
+   注意：conda 用本机 miniforge（134 /home/na、66 /root/neo/envs、169 /root/neo/env_tool），
+   不要往 neoag_100T 装 Miniforge。缺 env 时再跑：
+   bash scripts/ensure_host_runtime.sh
 5. 安装结束后打开并摘要：
    $DEPS_DIR/manifests/verify_report.tsv
-   标出 REQUIRED 失败项、EXTERNAL_SYMLINK、conda env、BSgenome / data.table / MHCflurry。
+   以及 bash scripts/host_verify.sh
+   标出 REQUIRED 失败项、conda env、BSgenome / data.table / MHCflurry / STAR / EasyFuse。
 6. 告诉我如何激活环境：
    source /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/configs/site.env.sh
 

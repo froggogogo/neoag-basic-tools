@@ -21,6 +21,10 @@ GEN="${NEO_ROOT}/scripts/generate_production_from_results_manifest.py"
 PY="${NEOAG_CONDA_BASE:-${DEPS}/software/miniforge3}/bin/python"
 [[ -x "$PY" ]] || PY="$(command -v python3)"
 
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/lib/ensure_neo_production.sh"
+ensure_neo_production "$(cd "${SCRIPT_DIR}/.." && pwd)" "$PY"
+
 optional() {
   local p="$1"
   [[ -e "$p" ]] && printf '%s' "$p" || true
@@ -62,8 +66,14 @@ add_if --normal-junctions "$DEPS/refs/normal/junctions/normal_junctions.GRCh38.t
 add_if --normal-expression "$DEPS/refs/normal/expression/normal_expression.gtex_v11_hpa_hspc.tsv"
 add_if --normal-hla-ligands "$DEPS/refs/normal/ligandome/normal_ms_ligands.tsv"
 add_if --reference-proteome "$DEPS/refs/normal/proteome/gencode.v49.pc_translations.clean.fa"
-add_if --netchop-executable "$DEPS/licenses/predictors/netchop/netchop-3.1/Linux_x86_64/bin/netChop"
-add_if --netchop-home "$DEPS/licenses/predictors/netchop/netchop-3.1"
+NETCHOP_BIN="${DEPS}/licenses/predictors/netchop/netchop-3.1/Linux_x86_64/bin/netChop"
+NETCHOP_HOME_DIR="${DEPS}/licenses/predictors/netchop/netchop-3.1"
+if [[ ! -x "$NETCHOP_BIN" ]]; then
+  NETCHOP_HOME_DIR="${NEOAG_PRED_FALLBACK:-/mnt/zzbnew/peixunban/gl/liup/neodata4git/data/predictors}/netchop/netchop-3.1"
+  NETCHOP_BIN="${NETCHOP_HOME_DIR}/Linux_x86_64/bin/netChop"
+fi
+add_if --netchop-executable "$NETCHOP_BIN"
+add_if --netchop-home "$NETCHOP_HOME_DIR"
 
 PROFILE="${NEO_ROOT}/profiles/sarcoma_rna_supported_v2_provisional.toml"
 [[ -f "$PROFILE" ]] && args+=(--profile "$PROFILE")
@@ -91,12 +101,13 @@ export NETMHCpan="${NETMHCpan:-${NETMHCPAN_HOME}}"
 export PRIME_HOME="${PRIME_HOME:-${DEPS}/licenses/predictors/prime}"
 export MIXMHCPRED_HOME="${MIXMHCPRED_HOME:-${DEPS}/licenses/predictors/mixMHCpred_install}"
 export BIGMHC_DIR="${BIGMHC_DIR:-${DEPS}/licenses/predictors/bigmhc}"
+export DEEPIMMUNO_DIR="${DEEPIMMUNO_DIR:-${DEPS}/licenses/predictors/DeepImmuno}"
 export NEOAG_PRIME_BIN="${NEOAG_PRIME_BIN:-${PRIME_HOME}/PRIME}"
 export NEOAG_PRIME_PYTHON="${NEOAG_PRIME_PYTHON:-${NEOAG_CONDA_BASE}/envs/neoag-tools/bin/python}"
 export MIXMHCPRED_BIN="${MIXMHCPRED_BIN:-${MIXMHCPRED_HOME}/MixMHCpred}"
 export BIGMHC_PYTHON="${BIGMHC_PYTHON:-${NEOAG_CONDA_BASE}/envs/neoag-tools/bin/python}"
-export NEOAG_NETCHOP_BIN="${NEOAG_NETCHOP_BIN:-${DEPS}/licenses/predictors/netchop/netchop-3.1/Linux_x86_64/bin/netChop}"
-export NETCHOP_HOME="${NETCHOP_HOME:-${DEPS}/licenses/predictors/netchop/netchop-3.1}"
+export NEOAG_NETCHOP_BIN="${NEOAG_NETCHOP_BIN:-${NETCHOP_BIN:-${DEPS}/licenses/predictors/netchop/netchop-3.1/Linux_x86_64/bin/netChop}}"
+export NETCHOP_HOME="${NETCHOP_HOME:-${NETCHOP_HOME_DIR:-${DEPS}/licenses/predictors/netchop/netchop-3.1}}"
 export PATH="${NEOAG_CONDA_BASE}/bin:${NEOAG_CONDA_BASE}/envs/neoag-tools/bin:${NETMHCPAN_HOME}:${PRIME_HOME}:${MIXMHCPRED_HOME}:${PATH:-}"
 
 if [[ -f "${DEPS}/configs/site.env.sh" ]]; then

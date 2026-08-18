@@ -46,7 +46,7 @@ export SAMPLE_ID TUMOR_BAM NORMAL_BAM OUTDIR="$CASE_ROOT/sequenza"
 bash "$DEPS_DIR/tools/sequenza/run_sequenza_steps.sh"
 ```
 
-Or the run skill CNV stage (`neoag-basic-tools-run/scripts/stages/sequenza.sh`).
+Or the independent run skill CNV stage (`../neoag-basic-tools-run/scripts/stages/sequenza.sh`).
 
 ### Apply fit patch to an external neo tree
 
@@ -112,3 +112,23 @@ Compilation failed … Bio/EnsEMBL/VEP/…
 Bundled NetMHCpan ELF may need a conda sysroot or docker image. Prefer a
 wrapper that mounts shared NAS paths consistently. Do not assume the bare
 binary works on every host.
+
+## 5. Production predictors — incomplete BigMHC / disabled immuno sources
+
+### Symptoms (sunbinbin 20260814 provenance)
+
+- `bigmhc_im` status `missing` while `licenses/predictors/bigmhc` looks populated
+- `deepimmuno` / `iedb` status `not_used`
+
+### Root cause
+
+1. `BIGMHC_DIR` pointed at a tree with **only** `models/` (no `src/predict.py`).
+2. Sarcoma profile `sources = ["prime", "bigmhc_im"]` omitted DeepImmuno and IEDB.
+
+### Installer
+
+- Verify sentinels: `bigmhc/src/predict.py`, `DeepImmuno/deepimmuno-cnn.py`, `MixMHCpred`, `PRIME`
+- `site.env` `neoag_export_production_predictors` picks the first tree that has the sentinel
+- `ensure_bigmhc_predict_py` copies `src/` from `NEOAG_PRED_FALLBACK` if deps is models-only
+
+Profile overlay belongs in the **run** skill (`ensure_neo_production.sh`).

@@ -20,6 +20,10 @@ declare -a VERIFY_MARKERS=(
   "refs/lohhla/polysolver|Polysolver home|OPTIONAL_LICENSED|dir"
   "refs/lohhla/novoalign.lic|Novoalign license|OPTIONAL_LICENSED|file"
   "licenses/predictors/netMHCpan|NetMHCpan|OPTIONAL_LICENSED|dir"
+  "licenses/predictors/bigmhc/src/predict.py|BigMHC-IM predict.py|OPTIONAL_LICENSED|file"
+  "licenses/predictors/DeepImmuno/deepimmuno-cnn.py|DeepImmuno-CNN|OPTIONAL_LICENSED|file"
+  "licenses/predictors/mixMHCpred_install/MixMHCpred|MixMHCpred|OPTIONAL_LICENSED|file"
+  "licenses/predictors/prime/PRIME|PRIME|OPTIONAL_LICENSED|file"
   "configs/site.env.sh|site.env.sh|REQUIRED|file"
   "src/neo/conda/env.neoag-tools.yml|install-slice env yml|REQUIRED|file"
   "src/neo/scripts/install_vep.sh|install-slice tool script|REQUIRED|file"
@@ -191,11 +195,12 @@ verify_installation() {
   if discover_conda 2>/dev/null; then
     ok "VERIFY conda: ${CONDA_EXE}"
     echo -e "conda\tconda\tENV\tOK\t${CONDA_EXE}" >>"$report"
-    if [[ "${CONDA_BASE}" != "${root}"* ]]; then
-      warn "VERIFY conda 不在 deps-dir 内: ${CONDA_BASE}（换机可能不可见）"
-      echo -e "conda_location\tconda_in_deps\tPORTABILITY\tEXTERNAL\t${CONDA_BASE}" >>"$report"
+    if is_network_fs "${CONDA_BASE}" 2>/dev/null; then
+      warn "VERIFY conda 在网络盘上: ${CONDA_BASE}（FUSE/NFS 上的 conda 不稳定）"
+      echo -e "conda_location\tconda_in_deps\tPORTABILITY\tNETWORK_FS\t${CONDA_BASE}" >>"$report"
     else
-      echo -e "conda_location\tconda_in_deps\tPORTABILITY\tOK\t${CONDA_BASE}" >>"$report"
+      ok "VERIFY conda on host disk: ${CONDA_BASE}"
+      echo -e "conda_location\tconda_host\tPORTABILITY\tOK\t${CONDA_BASE}" >>"$report"
     fi
 
     local env envdir

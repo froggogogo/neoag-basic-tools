@@ -83,7 +83,7 @@ install_basic_envs() {
       continue
     fi
     log "创建 env (via ${CONDA_FRONTEND##*/}): $name <- $yml"
-    if conda_frontend env create -n "$name" -f "$yml"; then
+    if conda_frontend env create -y -n "$name" -f "$yml"; then
       ok "创建成功: $name"
       echo -e "${name}\t${yml}\tCREATED\t-\t${CONDA_FRONTEND}" >>"${DEPS_DIR}/manifests/conda_envs.tsv"
       pass=$((pass + 1))

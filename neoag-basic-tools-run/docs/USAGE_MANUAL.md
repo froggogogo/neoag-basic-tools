@@ -4,10 +4,10 @@
 
 ```bash
 source /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/configs/site.env.sh
-cd /path/to/neoag-basic-tools-install/neoag-basic-tools-run
+cd /path/to/neoag-skills/neoag-basic-tools-run
 ```
 
-若尚未安装 deps，先按上级目录 [docs/USAGE_MANUAL.md](../../docs/USAGE_MANUAL.md) 安装。
+若尚未安装 deps，先按安装 Skill [USAGE_MANUAL.md](../neoag-basic-tools-install/docs/USAGE_MANUAL.md)。
 
 ## 2. 探查机器
 

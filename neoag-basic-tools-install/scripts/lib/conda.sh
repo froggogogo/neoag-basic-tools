@@ -17,11 +17,12 @@ discover_conda() {
     :
   fi
 
-  # Explicit user / deps locations first (no legacy zzbnew hardcodes — install only needs deps disk)
+  # Host gold prefixes first (OSS/FUSE neoag_100T is a bad conda prefix).
   cands+=(
     "${CONDA_DIR:-}/bin/conda"
-    "${DEPS_DIR}/software/miniforge3/bin/conda"
-    "/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3/bin/conda"
+    "/home/na/miniforge3/bin/conda"
+    "/root/neo/envs/miniforge3/bin/conda"
+    "/root/neo/env_tool/miniforge3/bin/conda"
     "${HOME}/.local/neoag-miniforge3/bin/conda"
     "${HOME}/miniforge3/bin/conda"
     "${HOME}/mambaforge/bin/conda"
@@ -31,6 +32,14 @@ discover_conda() {
     "/root/miniforge3/bin/conda"
     "/root/miniconda3/bin/conda"
   )
+  # Shared deps conda only if it is a real local/non-FUSE prefix.
+  if [[ -x "${DEPS_DIR}/software/miniforge3/bin/conda" ]] && ! is_network_fs "${DEPS_DIR}/software/miniforge3"; then
+    cands+=("${DEPS_DIR}/software/miniforge3/bin/conda")
+  fi
+  if [[ -x "/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3/bin/conda" ]] \
+      && ! is_network_fs "/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3"; then
+    cands+=("/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3/bin/conda")
+  fi
 
   for cand in "${cands[@]}"; do
     [[ -z "$cand" || "$cand" == "/bin/conda" ]] && continue
@@ -153,26 +162,28 @@ conda_frontend() {
   if [[ -z "${CONDA_FRONTEND:-}" ]]; then
     resolve_mamba_exe
   fi
-  "${CONDA_FRONTEND}" "$@"
+  CONDA_ALWAYS_YES=true MAMBA_ALWAYS_YES=true "${CONDA_FRONTEND}" "$@"
 }
 
 resolve_conda() {
-  # Prefer deps-dir conda when ONE_SHOT / PREFER_DEPS_CONDA (portable across hosts).
+  # Prefer deps-dir conda only on a real local disk. OSS/FUSE neoag_100T cannot
+  # host a working conda prefix (gold: 134 /home/na, 66 envs, 169 env_tool).
   if [[ "${PREFER_DEPS_CONDA:-0}" == "1" ]]; then
     local deps_conda="${DEPS_DIR}/software/miniforge3/bin/conda"
-    if [[ -x "$deps_conda" ]]; then
+    local deps_prefix="${DEPS_DIR}/software/miniforge3"
+    if is_network_fs "${DEPS_DIR}" || is_network_fs "$deps_prefix"; then
+      warn "prefer-deps-conda：${DEPS_DIR} 是网络盘/FUSE，不在这里装 conda。改用本机 miniforge。"
+    elif [[ -x "$deps_conda" ]]; then
       CONDA_EXE="$deps_conda"
       CONDA_BASE="$(cd "$(dirname "$deps_conda")/.." && pwd -P)"
       export CONDA_EXE CONDA_BASE
       ok "使用 deps 内 Conda: ${CONDA_BASE}"
       resolve_mamba_exe
       return 0
-    fi
-    if [[ "${MODE}" == "plan" || "${MODE}" == "verify" ]]; then
+    elif [[ "${MODE}" == "plan" || "${MODE}" == "verify" ]]; then
       warn "prefer-deps-conda：deps 内尚无 Miniforge（plan/verify 不自动安装）"
-      # fall through to discover for verify visibility
     else
-      local target="${CONDA_DIR:-${DEPS_DIR}/software/miniforge3}"
+      local target="${CONDA_DIR:-${deps_prefix}}"
       log "prefer-deps-conda：安装 Miniforge -> ${target}"
       install_miniforge "$target"
       return 0

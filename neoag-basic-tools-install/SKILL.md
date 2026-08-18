@@ -9,8 +9,9 @@ description: >-
   fread fit plus bam2seqz NUL wrapper and samtools 1.9, MHCflurry path layout,
   and VEP Perl isolation; verifies readability plus env smoke tests. Use when
   installing neoantigen basic tools or setting up neoag-basic-tools-install-deps
-  on any intranet host that mounts neoag_100T. zjl is only needed if shared
-  deps are still missing.
+  on any intranet host that mounts neoag_100T. Does not run patient cases
+  (that is neoag-basic-tools-run). zjl is only needed if shared deps are
+  still missing.
 ---
 
 # NeoAg Basic Tools Install
@@ -26,7 +27,7 @@ missing items.
 ## One-shot (recommended)
 
 ```bash
-cd /path/to/neoag-basic-tools-install
+cd /path/to/neoag-skills/neoag-basic-tools-install
 bash scripts/install.sh --mode install --one-shot --yes
 ```
 
@@ -38,6 +39,7 @@ bash scripts/install.sh --mode install --one-shot --yes
 - 安装后自动 `--mode verify`
 - **运行期加固**：`r-data.table`、Sequenza chrom-split fit、`bam2seqz_nulsafe`、samtools 1.9、MHCflurry 布局
 - **环境创建优先 mamba**；无 mamba 时回退 conda
+- **本机 conda**：不往 OSS/FUSE 的 neoag_100T 装 Miniforge；`site.env.sh` source 时发现 134/66/169 上已有的 miniforge
 
 ## Runtime hardening
 
@@ -48,6 +50,7 @@ See [references/runtime-hardening.md](references/runtime-hardening.md). Summary:
 | Sequenza fit vroom / fake `.gz` / mmap crash | chrom-split fread：`scripts/patches/run_sequenza_fit.fread.R` + `r-data.table` |
 | Sequenza bam2seqz NUL (`samtools` 1.23) | `tools/sequenza/bam2seqz_nulsafe.py` + env `neoag-samtools19` |
 | MHCflurry missing / wrong path | `ensure_mhcflurry_layout`；`site.env` 设 `MHCFLURRY_DATA_DIR` |
+| BigMHC 缺 `src/predict.py` | `ensure_bigmhc_predict_py`；`site.env` 按 sentinel 选完整树 |
 | VEP Perl 串台（miniconda） | `source site.env.sh` 后调用 `neoag_use_vep_perl` |
 | 外部 fit 脚本尚未打补丁 | `bash scripts/apply_sequenza_fit_fread_patch.sh --fit-r /path/to/run_sequenza_fit.R` |
 
@@ -74,21 +77,32 @@ See [references/runtime-hardening.md](references/runtime-hardening.md). Summary:
 
 `/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps`
 
-## Shared Miniforge (on neoag_100T)
+## Shared conda (host prefix, not OSS)
 
-`--one-shot` / `--prefer-deps-conda` 使用：
+`--one-shot` **不会**把 Miniforge 装到 neoag_100T（OSS/FUSE 上 conda 前缀会坏）。本机发现顺序：
 
-`/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3`
+| 主机 | Conda |
+|------|--------|
+| 134 | `/home/na/miniforge3` |
+| 66 | `/root/neo/envs/miniforge3`（`env_tool` → 同一棵树） |
+| 169 | `/root/neo/env_tool/miniforge3` |
 
-- 该路径**还没有** conda：第一台安装机会**出网**把 Miniforge 装到这里，基础 env 建在 `envs/` 下。
-- **已经有了**：后续机器复用，不再重装 Miniforge / 已存在的同名 env。
-- 其它机器挂上同一块 `neoag_100T` 后，只需：
+补齐本机缺失 env（samtools 1.9、BSgenome、data.table、conda-pack 金标准 env）：
+
+```bash
+bash scripts/ensure_host_runtime.sh
+bash scripts/host_verify.sh
+```
+
+其它机器挂上同一块 `neoag_100T` 后：
 
 ```bash
 source /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/configs/site.env.sh
 ```
 
-不必把 Conda 再装到 `/home` 或 `/root`。`source` 只设置 PATH 与 refs，不是重新安装。
+`site.env.sh` 会在 **source 时**发现本机 conda / 工具树，不再写死安装机路径。
+
+`--prefer-deps-conda` 仅当 deps 在本地盘（非 FUSE）时才把 Miniforge 装进 `$DEPS_DIR/software/miniforge3`。
 
 ## Skill vs neo
 
@@ -113,12 +127,12 @@ bash scripts/install.sh --mode sync --yes --sync-mode copy --force-resync
 bash scripts/install.sh --mode verify
 ```
 
-## References
+安装完成后用**独立**运行 Skill（兄弟目录，不要从本目录嵌套调用）：
+[../neoag-basic-tools-run/SKILL.md](../neoag-basic-tools-run/SKILL.md)
 
 - [README.md](README.md)
 - [docs/USAGE_AGENT.md](docs/USAGE_AGENT.md) — Agent 安装 Prompt
 - [docs/USAGE_MANUAL.md](docs/USAGE_MANUAL.md) — 人工一键安装
-- [neoag-basic-tools-run/SKILL.md](neoag-basic-tools-run/SKILL.md) — 基础工具一键运行 + 生产
 - [references/deps-layout.md](references/deps-layout.md)
 - [references/sync-policy.md](references/sync-policy.md)
 - [references/basic-tool-list.md](references/basic-tool-list.md)

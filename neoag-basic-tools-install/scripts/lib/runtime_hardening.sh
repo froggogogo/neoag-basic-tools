@@ -2,6 +2,55 @@
 # Runtime hardening helpers (Sequenza data.table, MHCflurry layout).
 # Sourced from install.sh / install_envs.sh.
 
+# 169-style broken r-base: exec/R linked to libiconv.so.2 + libicu*.so.75 that
+# were never installed into the env. Copy from a sibling env or conda prefix.
+ensure_sequenza_r_dynlibs() {
+  local env_prefix="${CONDA_BASE}/envs/neoag-sequenza"
+  local rbin="${env_prefix}/lib/R/bin/exec/R"
+  [[ -x "$rbin" ]] || return 0
+  if ldd "$rbin" 2>/dev/null | grep -q 'libiconv.so.2 => not found'; then
+    log "neoag-sequenza R 缺 libiconv/icu，从同机其它 env 补共享库"
+  else
+    return 0
+  fi
+  local src="" cand
+  for cand in \
+    "${CONDA_BASE}/envs/neoag-fusion/lib" \
+    "${CONDA_BASE}/envs/neoag-tools/lib" \
+    "${CONDA_BASE}/lib"
+  do
+    if [[ -e "${cand}/libiconv.so.2" ]]; then src="$cand"; break; fi
+  done
+  if [[ -z "$src" ]]; then
+    warn "未找到 libiconv.so.2 可复制来源"
+    return 1
+  fi
+  mkdir -p "${env_prefix}/lib"
+  local f
+  for f in libiconv.so libiconv.so.2 libiconv.so.2.7.0 \
+           libicuuc.so.75 libicuuc.so.75.1 \
+           libicui18n.so.75 libicui18n.so.75.1 \
+           libicudata.so.75 libicudata.so.75.1; do
+    [[ -e "${src}/$f" ]] && cp -a "${src}/$f" "${env_prefix}/lib/$f"
+  done
+  ok "已补 neoag-sequenza libiconv/icu from ${src}"
+}
+
+ensure_sequenza_r_packages_from_gold() {
+  local env_prefix="${CONDA_BASE}/envs/neoag-sequenza"
+  local rscript="${env_prefix}/bin/Rscript"
+  local gold="${DEPS_DIR}/packages/r_libs/sequenza_library"
+  [[ -x "$rscript" ]] || return 0
+  if "$rscript" -e 'suppressPackageStartupMessages(library(sequenza)); cat("OK\n")' >/dev/null 2>&1; then
+    return 0
+  fi
+  [[ -d "$gold" ]] || return 1
+  log "从金标准 R library 补 sequenza 依赖: ${gold}"
+  mkdir -p "${env_prefix}/lib/R/library"
+  rsync -a "$gold"/ "${env_prefix}/lib/R/library/" || return 1
+  "$rscript" -e 'suppressPackageStartupMessages(library(sequenza)); cat("OK\n")' >/dev/null 2>&1
+}
+
 ensure_sequenza_datatable() {
   local env_prefix="${CONDA_BASE}/envs/neoag-sequenza"
   local rscript="${env_prefix}/bin/Rscript"
@@ -10,6 +59,9 @@ ensure_sequenza_datatable() {
     warn "neoag-sequenza 无 Rscript，跳过 r-data.table"
     return 0
   }
+
+  ensure_sequenza_r_dynlibs || true
+  ensure_sequenza_r_packages_from_gold || true
 
   if "$rscript" -e 'cat(requireNamespace("data.table", quietly=TRUE), "\n")' 2>/dev/null | grep -q TRUE; then
     ok "neoag-sequenza 已具备 data.table"
@@ -20,13 +72,20 @@ ensure_sequenza_datatable() {
   ensure_dir "${DEPS_DIR}/logs" 777
   local ok_install=0
   if declare -F conda_frontend >/dev/null 2>&1; then
-    if conda_frontend install -y -n neoag-sequenza -c conda-forge r-data.table \
+    if conda_frontend install -y -n neoag-sequenza --override-channels -c conda-forge r-data.table \
         >"${DEPS_DIR}/logs/r_datatable_conda.out" 2>"${DEPS_DIR}/logs/r_datatable_conda.err"; then
       ok_install=1
     fi
-  elif [[ -n "${CONDA_EXE:-}" ]] && "${CONDA_EXE}" install -y -n neoag-sequenza -c conda-forge r-data.table \
+  elif [[ -n "${CONDA_EXE:-}" ]] && "${CONDA_EXE}" install -y -n neoag-sequenza --override-channels -c conda-forge r-data.table \
       >"${DEPS_DIR}/logs/r_datatable_conda.out" 2>"${DEPS_DIR}/logs/r_datatable_conda.err"; then
     ok_install=1
+  fi
+  if [[ "$ok_install" -eq 0 ]]; then
+    warn "conda 安装 r-data.table 失败，尝试 R install.packages"
+    if "$rscript" -e 'install.packages("data.table", repos="https://cloud.r-project.org")' \
+        >"${DEPS_DIR}/logs/r_datatable_cran.out" 2>"${DEPS_DIR}/logs/r_datatable_cran.err"; then
+      ok_install=1
+    fi
   fi
   if [[ "$ok_install" -eq 1 ]]; then
     ok "mamba/conda 安装 r-data.table 成功"
@@ -203,10 +262,28 @@ maybe_patch_deps_sequenza_fit() {
   ok "已将 chrom-split Sequenza fit 补丁写入 ${fit_r}"
 }
 
+# If deps BigMHC has models but no src/predict.py, copy src from fallback.
+# Do not overwrite a complete deps tree.
+ensure_bigmhc_predict_py() {
+  local dest="${DEPS_DIR}/licenses/predictors/bigmhc"
+  local fallback="${NEOAG_PRED_FALLBACK:-/mnt/zzbnew/peixunban/gl/liup/neodata4git/data/predictors}/bigmhc"
+  [[ -f "${dest}/src/predict.py" ]] && return 0
+  if [[ -f "${fallback}/src/predict.py" ]]; then
+    ensure_dir "${dest}/src" 775
+    cp -a "${fallback}/src/." "${dest}/src/"
+    ok "已从 fallback 补齐 BigMHC src/ → ${dest}/src"
+    return 0
+  fi
+  warn "BigMHC 缺 src/predict.py（${dest}）。生产会记 missing。请从完整 deps 拷贝 src/"
+  return 1
+}
+
 apply_runtime_hardening() {
+  ensure_sequenza_r_dynlibs || true
   ensure_sequenza_datatable || true
   ensure_sequenza_samtools19 || true
   install_sequenza_runtime_files || true
   maybe_patch_deps_sequenza_fit || true
   ensure_mhcflurry_layout || true
+  ensure_bigmhc_predict_py || true
 }

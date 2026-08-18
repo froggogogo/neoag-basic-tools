@@ -75,10 +75,12 @@ export FORCE CONTINUE_ON_ERROR DEPS_DIR CASE_ROOT SAMPLE_ID NEO_ROOT
 export TUMOR_BAM NORMAL_BAM SOMATIC_VCF RNA_R1 RNA_R2
 export PATIENT_ID="${SAMPLE_ID}"
 
-SITE="${DEPS_DIR}/configs/site.env.sh"
-if [[ -f "$SITE" ]]; then
+if [[ -f "${DEPS_DIR}/configs/bootstrap_case.sh" ]]; then
   # shellcheck disable=SC1090
-  source "$SITE"
+  source "${DEPS_DIR}/configs/bootstrap_case.sh"
+elif [[ -f "${DEPS_DIR}/configs/site.env.sh" ]]; then
+  # shellcheck disable=SC1090
+  source "${DEPS_DIR}/configs/site.env.sh"
 fi
 
 probe_text() { bash "${SCRIPT_DIR}/probe_host.sh"; }

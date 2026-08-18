@@ -35,6 +35,10 @@ run skill `stages/production.sh` 等价逻辑，但：
 
 - normal refs / predictors 来自 `$DEPS_DIR/refs/normal`、`$DEPS_DIR/licenses/predictors`
 - 不再硬编码 zjl/zzbnew asset 路径
+- 跑前 `ensure_neo_production.sh`：neo `conf/tools.env.local.sh` 指到 **完整** BigMHC（含 `src/predict.py`）+ DeepImmuno + MixMHCpred；sarcoma profile `sources = prime, bigmhc_im, deepimmuno, iedb`
+- MixMHCpred 随 PRIME `-mix` 跑，不是独立 provenance 工具
+
+详见 [production-predictors.md](production-predictors.md)。
 
 ## 输入数据（sunbinbin 示例）
 
@@ -70,6 +74,6 @@ cp sunbinbin/short-rna/inputs.env.sh "$CASE/short-rna/"
 然后：
 
 ```bash
-bash neoag-basic-tools-run/scripts/run.sh --yes \
+bash scripts/run.sh --yes \
   --case-root "$CASE" --sample-id NEW_SAMPLE --neo-root ...
 ```

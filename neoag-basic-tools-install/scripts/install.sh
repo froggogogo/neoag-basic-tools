@@ -37,7 +37,7 @@ Options:
   --asset-source DIR      资产源（默认 /mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git）
   --neo-src DIR           neo 流水线源码
   --sync-mode MODE        copy|symlink|auto（默认 copy：资产落入 neoag_100T，不依赖 zjl 可读）
-  --one-shot              推荐：copy + envs + tool-scripts + conda 优先装进 deps-dir
+  --one-shot              推荐：copy + envs + tool-scripts + 本机 conda（不往 FUSE 盘装 miniforge）
   --with-envs             install 时创建基础 conda 环境
   --with-tool-scripts     install/envs 时执行 neo scripts/install_*.sh
   --prefer-deps-conda     优先使用/安装 $DEPS_DIR/software/miniforge3
@@ -98,12 +98,12 @@ done
 if [[ "$ONE_SHOT" == "1" ]]; then
   WITH_ENVS=1
   WITH_TOOL_SCRIPTS=1
-  PREFER_DEPS_CONDA=1
-  # keep user override of sync-mode if they passed it before/after; default remains copy
-  if [[ -z "${CONDA_DIR}" ]]; then
-    CONDA_DIR="${DEPS_DIR}/software/miniforge3"
-  fi
-  log "one-shot：sync-mode=${SYNC_MODE} with-envs=1 tools=1 prefer-deps-conda=1 conda-dir=${CONDA_DIR}"
+  ALLOW_ROOT_CONDA=1
+  CONTINUE_ON_ERROR=1
+  # Do NOT default conda onto OSS/FUSE neoag_100T. Host gold prefixes:
+  # 134=/home/na/miniforge3  66=/root/neo/envs/miniforge3  169=/root/neo/env_tool/miniforge3
+  # --prefer-deps-conda remains opt-in for a real local shared disk.
+  log "one-shot：sync-mode=${SYNC_MODE} with-envs=1 tools=1 prefer-deps-conda=${PREFER_DEPS_CONDA} host-conda-first=1"
 fi
 
 export MODE DEPS_DIR CONDA_DIR ASSET_SOURCE NEO_SRC SYNC_MODE

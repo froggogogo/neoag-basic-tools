@@ -14,11 +14,11 @@
 ## 一键命令
 
 ```bash
-# 1) 拿到本 skill（仓库根即本 skill；远端也可能是 neoag-skills）
-git clone git@github.com:froggogogo/neoag-skills.git neoag-basic-tools-install
-cd neoag-basic-tools-install
-# 若你们仍用旧 remote：
-# git clone git@github.com:froggogogo/neoag-private.git neoag-basic-tools-install && cd neoag-basic-tools-install
+# 1) 克隆仓库后进入【安装】目录（运行 Skill 是旁边的 neoag-basic-tools-run）
+git clone git@github.com:froggogogo/neoag-skills.git
+cd neoag-skills/neoag-basic-tools-install
+# 若仍用旧 remote：
+# git clone git@github.com:froggogogo/neoag-private.git neoag-skills && cd neoag-skills/neoag-basic-tools-install
 
 # 2) 预览（不写盘）
 bash scripts/install.sh --mode plan
@@ -27,15 +27,22 @@ bash scripts/install.sh --mode plan
 bash scripts/install.sh --mode install --one-shot --yes
 ```
 
-`--one-shot` 会：同步资产（已存在的 refs 默认跳过）→ 在 deps 内准备 Miniforge → **mamba/conda** 建基础 env → 跑 `install_*.sh` → 运行期加固 → verify。
+`--one-shot` 会：同步资产（已存在的 refs 默认跳过）→ **使用本机 miniforge**（不往 OSS neoag_100T 装 conda）→ **mamba/conda** 补基础 env → 跑 `install_*.sh` → 运行期加固 → verify。
 
-Miniforge 固定落在：
+金标准本机 conda：
 
-```text
-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/software/miniforge3
+| 主机 | 路径 |
+|------|------|
+| 134 | `/home/na/miniforge3` |
+| 66 | `/root/neo/envs/miniforge3` |
+| 169 | `/root/neo/env_tool/miniforge3` |
+
+补齐本机缺口：
+
+```bash
+bash scripts/ensure_host_runtime.sh
+bash scripts/host_verify.sh
 ```
-
-第一台机若这里还没有 conda，会出网安装并把 env 建在 `envs/`；之后其它机器复用，不重装。只想用工具时，挂盘后 `source` 下面的 `site.env.sh` 即可。
 
 日志：`$DEPS_DIR/logs/`  
 验收：`$DEPS_DIR/manifests/verify_report.tsv`

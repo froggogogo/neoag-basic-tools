@@ -28,6 +28,10 @@ run_wrapper_or_hint() {
   local w
   if w="$(find_wrapper "$stem")"; then
     log "dispatch ${stem} -> ${w}"
+    if [[ -f "${DEPS_DIR:-}/configs/bootstrap_case.sh" ]]; then
+      # shellcheck disable=SC1090
+      source "${DEPS_DIR}/configs/bootstrap_case.sh"
+    fi
     bash "$w"
     return $?
   fi

@@ -13,7 +13,7 @@
 
 要求：
 1. source /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/configs/site.env.sh
-2. cd .../neoag-basic-tools-install/neoag-basic-tools-run
+2. cd .../neoag-skills/neoag-basic-tools-run
 3. bash scripts/probe_host.sh — 汇报 nproc、mem_gb、mode（serial|dual|full）
 4. bash scripts/run.sh --mode plan --yes \
      --case-root <CASE_ROOT> \
@@ -33,6 +33,8 @@
 - TMP 必须在 CASE_ROOT/tmp
 - EasyFuse 仅 Ubuntu 22.04
 - 生产必须用完整 neo（--neo-root），不是 deps/src/neo
+- 生产须启用 PRIME + BigMHC-IM + DeepImmuno + IEDB；MixMHCpred 作为 PRIME 依赖
+- BigMHC 必须有 src/predict.py，不要用只有 models/ 的不完整目录
 ```
 
 ## Agent 核对清单

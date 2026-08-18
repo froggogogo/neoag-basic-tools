@@ -25,6 +25,7 @@ init_deps_layout() {
     "$root/packages/installers" \
     "$root/packages/conda_pkgs" \
     "$root/packages/pip_cache" \
+    "$root/packages/conda_packs" \
     "$root/configs" \
     "$root/tools" \
     "$root/software" \

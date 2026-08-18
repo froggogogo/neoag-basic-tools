@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-NEOAG_INSTALL_VERSION="1.4.0"
+NEOAG_INSTALL_VERSION="1.5.0"
 
 log()  { printf '[%s] INFO  %s\n'  "$(date '+%F %T')" "$*"; }
 ok()   { printf '[%s] OK    %s\n'  "$(date '+%F %T')" "$*"; }
@@ -105,6 +105,22 @@ detect_os_summary() {
   else
     echo "$(uname -s) $(uname -r) $(uname -m)"
   fi
+}
+
+# True if path lives on NFS/FUSE/OSS (bad conda prefix).
+is_network_fs() {
+  local p="${1:-}"
+  [[ -n "$p" ]] || return 1
+  local fstype=""
+  if [[ -d "$p" ]]; then
+    fstype="$(df -T "$p" 2>/dev/null | awk 'NR==2{print $2}')"
+  elif [[ -d "$(dirname "$p")" ]]; then
+    fstype="$(df -T "$(dirname "$p")" 2>/dev/null | awk 'NR==2{print $2}')"
+  fi
+  case "${fstype}" in
+    nfs*|fuse*|oss*|cifs*|smb*|lustre*|ceph*) return 0 ;;
+  esac
+  return 1
 }
 
 # Export EasyFuse capability for site.env / verify / installers

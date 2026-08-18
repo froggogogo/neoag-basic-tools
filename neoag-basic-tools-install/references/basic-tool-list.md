@@ -46,3 +46,18 @@ Gold: sunbinbin 2026-08-17 chrom-split fread (`references/runtime-hardening.md`)
 
 - Isolate `PERL5LIB` to `neoag-vep` only (`neoag_use_vep_perl` in `site.env.sh`)
 
+### Production predictors (licensed + profile)
+
+Required files under `$DEPS_DIR/licenses/predictors` (verify as OPTIONAL_LICENSED):
+
+| Tool | Sentinel |
+|------|----------|
+| BigMHC-IM | `bigmhc/src/predict.py` |
+| DeepImmuno | `DeepImmuno/deepimmuno-cnn.py` |
+| MixMHCpred | `mixMHCpred_install/MixMHCpred`（PRIME `-mix` 依赖） |
+| PRIME | `prime/PRIME` |
+| IEDB | 无二进制；run skill 把 sarcoma profile `sources` 列入 `iedb` |
+
+`site.env.sh` 按 sentinel 挑选目录，不要指向只有 `models/` 的不完整 BigMHC。
+运行期 profile 与 overlay 见 run skill `references/production-predictors.md`。
+

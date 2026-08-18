@@ -93,4 +93,13 @@ export_case_env() {
     # shellcheck disable=SC1090
     source "${CASE_ROOT}/inputs.env.sh"
   fi
+  # Restore portable conda/tools after case defaults (66-only paths, TF_USE_LEGACY_KERAS).
+  if [[ -f "${DEPS_DIR:-}/configs/bootstrap_case.sh" ]]; then
+    # shellcheck disable=SC1090
+    source "${DEPS_DIR}/configs/bootstrap_case.sh"
+  elif [[ -f "${DEPS_DIR:-}/configs/site.env.sh" ]]; then
+    # shellcheck disable=SC1090
+    source "${DEPS_DIR}/configs/site.env.sh"
+  fi
+  unset TF_USE_LEGACY_KERAS KERAS_BACKEND || true
 }

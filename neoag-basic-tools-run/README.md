@@ -1,6 +1,6 @@
 # neoag-basic-tools-run
 
-新抗原**基础工具一键运行** Skill，与 [neoag-basic-tools-install](../README.md) 同仓库。
+新抗原**基础工具一键运行** Skill（独立模块）。须先完成 [neoag-basic-tools-install](../neoag-basic-tools-install/README.md)，再在本目录跑病例。
 
 版本 **1.1.0**。调度参考 **sunbinbin**（66/134/169 上最完整病例）。 Sequenza 使用 2026-08-17 跑通的 chrom-split + NUL-safe bam2seqz，不依赖病例自带旧 fit。
 
@@ -8,7 +8,7 @@
 
 1. **探查机器**：核数、内存 → `serial` | `dual` | `full`
 2. **跑基础工具**：HLA、CNV（含内置 Sequenza）、LOHHLA、短读 RNA、SNAF、SpliceMutr、VEP
-3. **生产接口**：汇总证据 → `evidence_report*.html`
+3. **生产接口**：overlay neo 预测器路径 + sarcoma immunogenicity（PRIME / BigMHC-IM / DeepImmuno / IEDB）→ `evidence_report*.html`
 
 ## 前置
 
@@ -21,7 +21,7 @@
 ## 快速开始
 
 ```bash
-cd neoag-basic-tools-run
+cd /path/to/neoag-skills/neoag-basic-tools-run
 source /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/configs/site.env.sh
 
 # 只看机器能开多少并行

@@ -5,8 +5,9 @@ description: >-
   parallelism (serial | dual | full). Drives HLA, CNV (including the
   sunbinbin Sequenza gold path: NUL-safe bam2seqz + chrom-split fread fit),
   LOHHLA, short-bulk RNA, SNAF, SpliceMutr, VEP, then neoag production_runner
-  for evidence reports. Uses shared neoag-basic-tools-install-deps. Use when
-  running a prepared case on intranet hosts 66/134/169.
+  for evidence reports. Does not install tools — run neoag-basic-tools-install
+  first, then source site.env.sh. Use when running a prepared case on
+  intranet hosts 66/134/169.
 ---
 
 # NeoAg Basic Tools Run
@@ -32,7 +33,7 @@ sample, then **production** (evidence + reports). Schedule follows **sunbinbin**
 ## One-shot run
 
 ```bash
-cd /path/to/neoag-basic-tools-install/neoag-basic-tools-run
+cd /path/to/neoag-skills/neoag-basic-tools-run
 source /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/configs/site.env.sh
 
 bash scripts/probe_host.sh                    # 探查核数/内存 → serial|dual|full
@@ -71,10 +72,15 @@ HLA OptiType→SpecHLA→HLA-LA; RNA STAR∥STAR-Fusion then downstream waves.
 3. **LOHHLA** (needs HLA + purity)
 4. **SNAF** → **SpliceMutr** (needs HLA + junctions)
 5. **VEP** (optional if `--somatic-vcf` set)
-6. **production** — `generate_production_from_results_manifest.py` +
+6. **production** — overlay neo `tools.env.local.sh` + sarcoma immunogenicity
+   sources（PRIME / BigMHC-IM / DeepImmuno / IEDB），再
+   `generate_production_from_results_manifest.py` +
    `python -m neoag.production_runner --execute`
 
 Skip production: `--skip-production`.
+
+MixMHCpred 不是独立 immunogenicity source，由 PRIME `-mix` 调用；路径必须可执行。
+详见 [references/production-predictors.md](references/production-predictors.md)。
 
 ## Non-negotiables
 
@@ -91,4 +97,5 @@ Skip production: `--skip-production`.
 - [docs/USAGE_MANUAL.md](docs/USAGE_MANUAL.md)
 - [references/schedule.md](references/schedule.md)
 - [references/sunbinbin-map.md](references/sunbinbin-map.md)
-- Install skill: [../SKILL.md](../SKILL.md)
+- [references/production-predictors.md](references/production-predictors.md)
+- Install skill: [../neoag-basic-tools-install/SKILL.md](../neoag-basic-tools-install/SKILL.md)
