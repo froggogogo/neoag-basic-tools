@@ -51,6 +51,7 @@ See [references/runtime-hardening.md](references/runtime-hardening.md). Summary:
 | Sequenza bam2seqz NUL (`samtools` 1.23) | `tools/sequenza/bam2seqz_nulsafe.py` + env `neoag-samtools19` |
 | MHCflurry missing / wrong path | `ensure_mhcflurry_layout`；`site.env` 设 `MHCFLURRY_DATA_DIR` |
 | BigMHC 缺 `src/predict.py` | `ensure_bigmhc_predict_py`；`site.env` 按 sentinel 选完整树 |
+| NetMHCstabpan 只有 IEDB shim | `ensure_netmhcstabpan_dtu` 检查 `$DEPS_DIR` 内是否已有 DTU 树（不从其他网盘拉取） |
 | VEP Perl 串台（miniconda） | `source site.env.sh` 后调用 `neoag_use_vep_perl` |
 | 外部 fit 脚本尚未打补丁 | `bash scripts/apply_sequenza_fit_fread_patch.sh --fit-r /path/to/run_sequenza_fit.R` |
 

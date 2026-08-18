@@ -56,6 +56,7 @@ Required files under `$DEPS_DIR/licenses/predictors` (verify as OPTIONAL_LICENSE
 | DeepImmuno | `DeepImmuno/deepimmuno-cnn.py` |
 | MixMHCpred | `mixMHCpred_install/MixMHCpred`（PRIME `-mix` 依赖） |
 | PRIME | `prime/PRIME` |
+| NetMHCstabpan | `Linux_x86_64/bin/netMHCstabpan` + `data/`（DTU；不要用 IEDB shim） |
 | IEDB | 无二进制；run skill 把 sarcoma profile `sources` 列入 `iedb` |
 
 `site.env.sh` 按 sentinel 挑选目录，不要指向只有 `models/` 的不完整 BigMHC。

@@ -79,6 +79,10 @@ CNV 队列会调用 `scripts/stages/sequenza.sh`：
 
 需要 `--tumor-bam` / `--normal-bam`（或病例 `run_sequenza_steps.sh`）。
 
+## SpliceMutr（坐标顺序）
+
+内置 `scripts/tools/splicemutr/prepare_splicemutr_candidates.py`：SNAF `coord` 若是 donor–acceptor 顺序（`start > end`），会先对调再写 junction TSV。stage 会把 `HELPER` 指到这份脚本，避免病例/旧 gold helper 把反写坐标吃进去。
+
 ## 产物
 
 - 主日志：`$CASE_ROOT/logs/run_YYYYMMDD_HHMMSS.log`

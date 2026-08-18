@@ -70,10 +70,13 @@ HLA OptiType→SpecHLA→HLA-LA; RNA STAR∥STAR-Fusion then downstream waves.
 1. **HLA** + **CNV** (parallel per schedule)
 2. **RNA** short-bulk (parallel in `full` mode)
 3. **LOHHLA** (needs HLA + purity)
-4. **SNAF** → **SpliceMutr** (needs HLA + junctions)
+4. **SNAF** → **SpliceMutr** (needs HLA + junctions). Helper
+   `scripts/tools/splicemutr/prepare_splicemutr_candidates.py` **forces
+   genomic start≤end** (SNAF coord may be donor–acceptor order).
 5. **VEP** (optional if `--somatic-vcf` set)
 6. **production** — overlay neo `tools.env.local.sh` + sarcoma immunogenicity
-   sources（PRIME / BigMHC-IM / DeepImmuno / IEDB），再
+   sources（PRIME / BigMHC-IM / DeepImmuno / IEDB），呈递含
+   NetMHCpan / MHCflurry / **NetMHCstabpan（DTU 本地，默认必跑）** / NetChop，再
    `generate_production_from_results_manifest.py` +
    `python -m neoag.production_runner --execute`
 

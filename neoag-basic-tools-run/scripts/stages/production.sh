@@ -68,16 +68,17 @@ add_if --normal-hla-ligands "$DEPS/refs/normal/ligandome/normal_ms_ligands.tsv"
 add_if --reference-proteome "$DEPS/refs/normal/proteome/gencode.v49.pc_translations.clean.fa"
 NETCHOP_BIN="${DEPS}/licenses/predictors/netchop/netchop-3.1/Linux_x86_64/bin/netChop"
 NETCHOP_HOME_DIR="${DEPS}/licenses/predictors/netchop/netchop-3.1"
-if [[ ! -x "$NETCHOP_BIN" ]]; then
-  NETCHOP_HOME_DIR="${NEOAG_PRED_FALLBACK:-/mnt/zzbnew/peixunban/gl/liup/neodata4git/data/predictors}/netchop/netchop-3.1"
-  NETCHOP_BIN="${NETCHOP_HOME_DIR}/Linux_x86_64/bin/netChop"
-fi
 add_if --netchop-executable "$NETCHOP_BIN"
 add_if --netchop-home "$NETCHOP_HOME_DIR"
 
 PROFILE="${NEO_ROOT}/profiles/sarcoma_rna_supported_v2_provisional.toml"
 [[ -f "$PROFILE" ]] && args+=(--profile "$PROFILE")
-args+=(--skip-netmhcstabpan)
+# NetMHCstabpan is required. Only skip when the DTU tree is missing AND the
+# operator explicitly sets SKIP_NETMHCSTABPAN=1.
+if [[ "${SKIP_NETMHCSTABPAN:-0}" == "1" ]]; then
+  args+=(--skip-netmhcstabpan)
+  warn "SKIP_NETMHCSTABPAN=1 — presentation_predictors 不含 netmhcstabpan"
+fi
 
 log "generate production manifest -> ${OUT}/manifest/production.results.toml"
 "$PY" "$GEN" "${args[@]}"
@@ -108,7 +109,9 @@ export MIXMHCPRED_BIN="${MIXMHCPRED_BIN:-${MIXMHCPRED_HOME}/MixMHCpred}"
 export BIGMHC_PYTHON="${BIGMHC_PYTHON:-${NEOAG_CONDA_BASE}/envs/neoag-tools/bin/python}"
 export NEOAG_NETCHOP_BIN="${NEOAG_NETCHOP_BIN:-${NETCHOP_BIN:-${DEPS}/licenses/predictors/netchop/netchop-3.1/Linux_x86_64/bin/netChop}}"
 export NETCHOP_HOME="${NETCHOP_HOME:-${NETCHOP_HOME_DIR:-${DEPS}/licenses/predictors/netchop/netchop-3.1}}"
-export PATH="${NEOAG_CONDA_BASE}/bin:${NEOAG_CONDA_BASE}/envs/neoag-tools/bin:${NETMHCPAN_HOME}:${PRIME_HOME}:${MIXMHCPRED_HOME}:${PATH:-}"
+export NETMHCSTABPAN_HOME="${NETMHCSTABPAN_HOME:-${DEPS}/licenses/predictors/netMHCstabpan}"
+export NETMHCSTABPAN_BIN="${NETMHCSTABPAN_BIN:-${NETMHCSTABPAN_HOME}/netMHCstabpan}"
+export PATH="${NEOAG_CONDA_BASE}/bin:${NEOAG_CONDA_BASE}/envs/neoag-tools/bin:${NETMHCPAN_HOME}:${NETMHCSTABPAN_HOME}:${PRIME_HOME}:${MIXMHCPRED_HOME}:${PATH:-}"
 
 if [[ -f "${DEPS}/configs/site.env.sh" ]]; then
   # shellcheck disable=SC1090

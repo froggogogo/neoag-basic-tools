@@ -5,7 +5,7 @@ Canonical tree under `--deps-dir` (default
 
 ```text
 refs/hg38|vep|hla|ctat|rna|easyfuse|facets|hmf|lohhla|ascat|sequenza|snaf|normal|sample_identity
-licenses/predictors/          # netMHCpan, prime, mixMHCpred, bigmhc, DeepImmuno
+licenses/predictors/          # netMHCpan, netMHCstabpan(DTU), prime, mixMHCpred, bigmhc, DeepImmuno
                               # BigMHC 必须含 src/predict.py（仅 models/ 不够）
 packages/{installers,conda_pkgs,pip_cache}
 tools/{neodata_tools,EasyFuse,STAR-Fusion,sequenza,…}

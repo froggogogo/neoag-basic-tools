@@ -1,0 +1,15 @@
+---
+description: After editing install/run skills, commit and push to origin.
+alwaysApply: true
+---
+
+# Push skill changes
+
+If you change files under `neoag-skills/`, `neoag-basic-tools-install/`, or `neoag-basic-tools-run/` (including `SKILL.md`, scripts, docs):
+
+1. Commit on the current branch with a message that states **why**.
+2. `git push` to the tracked remote (`origin`). Do not wait for a second “push” request.
+3. Do not `--no-verify`, do not force-push `main`/`master`.
+4. After push, give the remote URL / commit.
+
+This overrides “only commit when asked” **for these skills only**. Other repos still need an explicit commit request.

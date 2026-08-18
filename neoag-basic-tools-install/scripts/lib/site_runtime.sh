@@ -360,6 +360,13 @@ neoag_export_production_predictors() {
   export NETCHOP_BIN="${NEOAG_NETCHOP_BIN}"
   export NETCHOP="${NETCHOP_HOME}/Linux_x86_64"
 
+  picked="$(neoag_pick_pred_dir "/Linux_x86_64/bin/netMHCstabpan" \
+    "${pred}/netMHCstabpan" || true)"
+  if [[ -n "${picked}" ]]; then
+    export NETMHCSTABPAN_HOME="${picked}"
+    export NETMHCSTABPAN_BIN="${NETMHCSTABPAN_HOME}/netMHCstabpan"
+  fi
+
   export NEOAG_PRIME_BIN="${PRIME_HOME}/PRIME"
   export MIXMHCPRED_BIN="${MIXMHCPRED_HOME}/MixMHCpred"
   if [[ -n "${NEOAG_CONDA_BASE:-}" ]]; then
@@ -416,7 +423,8 @@ neoag_site_activate() {
   export NETMHCPAN_HOME="${deps}/licenses/predictors/netMHCpan"
   export NEOAG_NETMHCPAN_BIN="${NETMHCPAN_HOME}/netMHCpan"
   export NEOAG_TOOL_QUARANTINE="${NEOAG_TOOL_QUARANTINE:-${deps}/licenses/predictors}"
-  export NEOAG_PRED_FALLBACK="${NEOAG_PRED_FALLBACK:-/mnt/zzbnew/peixunban/gl/liup/neodata4git/data/predictors}"
+  export NETMHCSTABPAN_HOME="${deps}/licenses/predictors/netMHCstabpan"
+  export NETMHCSTABPAN_BIN="${NETMHCSTABPAN_HOME}/netMHCstabpan"
 
   if [[ -f "${deps}/configs/mhcflurry_data_dir.txt" ]]; then
     export MHCFLURRY_DATA_DIR="$(head -1 "${deps}/configs/mhcflurry_data_dir.txt" | tr -d '[:space:]')"
@@ -427,7 +435,9 @@ neoag_site_activate() {
   fi
 
   neoag_resolve_conda_base || true
-  neoag_export_production_predictors "${deps}/licenses/predictors" "${NEOAG_PRED_FALLBACK}"
+  neoag_export_production_predictors "${deps}/licenses/predictors" ""
+  export NETMHCSTABPAN_HOME="${deps}/licenses/predictors/netMHCstabpan"
+  export NETMHCSTABPAN_BIN="${NETMHCSTABPAN_HOME}/netMHCstabpan"
   neoag_resolve_neo_root
   neoag_resolve_tools_root
   neoag_resolve_chr_fasta
@@ -457,6 +467,7 @@ neoag_site_activate() {
   [[ -d "${deps}/tools/neodata_tools/bin" ]] && prepend="${prepend:+${prepend}:}${deps}/tools/neodata_tools/bin"
   [[ -n "${PRIME_HOME:-}" && -d "${PRIME_HOME}" ]] && prepend="${prepend:+${prepend}:}${PRIME_HOME}"
   [[ -n "${MIXMHCPRED_HOME:-}" && -d "${MIXMHCPRED_HOME}" ]] && prepend="${prepend:+${prepend}:}${MIXMHCPRED_HOME}"
+  [[ -n "${NETMHCSTABPAN_HOME:-}" && -d "${NETMHCSTABPAN_HOME}" ]] && prepend="${prepend:+${prepend}:}${NETMHCSTABPAN_HOME}"
   [[ -n "${BCFTOOLS:-}" ]] && prepend="${prepend:+${prepend}:}$(dirname "${BCFTOOLS}")"
   [[ -n "${SAMTOOLS_BIN:-}" ]] && prepend="${prepend:+${prepend}:}$(dirname "${SAMTOOLS_BIN}")"
   if [[ -n "$prepend" ]]; then

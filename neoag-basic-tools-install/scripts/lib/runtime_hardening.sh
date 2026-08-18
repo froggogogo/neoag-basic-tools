@@ -278,6 +278,18 @@ ensure_bigmhc_predict_py() {
   return 1
 }
 
+# Verify DTU NetMHCstabpan is already inside DEPS_DIR (neoag_100T).
+# Do not pull from other NAS. Seed by copying into 100T when tuning is done.
+ensure_netmhcstabpan_dtu() {
+  local dest="${DEPS_DIR}/licenses/predictors/netMHCstabpan"
+  if [[ -x "${dest}/Linux_x86_64/bin/netMHCstabpan" && -d "${dest}/data" ]]; then
+    ok "NetMHCstabpan DTU 已在 ${dest}"
+    return 0
+  fi
+  warn "NetMHCstabpan DTU 标记未齐（${dest}）。不阻断安装；运行 skill 需要 Linux_x86_64/bin + data/。"
+  return 0
+}
+
 apply_runtime_hardening() {
   ensure_sequenza_r_dynlibs || true
   ensure_sequenza_datatable || true
@@ -286,4 +298,5 @@ apply_runtime_hardening() {
   maybe_patch_deps_sequenza_fit || true
   ensure_mhcflurry_layout || true
   ensure_bigmhc_predict_py || true
+  ensure_netmhcstabpan_dtu || true
 }

@@ -127,7 +127,8 @@ binary works on every host.
 
 ### Installer
 
-- Verify sentinels: `bigmhc/src/predict.py`, `DeepImmuno/deepimmuno-cnn.py`, `MixMHCpred`, `PRIME`
+- Verify sentinels: `bigmhc/src/predict.py`, `DeepImmuno/deepimmuno-cnn.py`, `MixMHCpred`, `PRIME`,
+  NetMHCstabpan `Linux_x86_64/bin/netMHCstabpan`（不要把 IEDB Python shim 当 DTU 安装）
 - `site.env` `neoag_export_production_predictors` picks the first tree that has the sentinel
 - `ensure_bigmhc_predict_py` copies `src/` from `NEOAG_PRED_FALLBACK` if deps is models-only
 

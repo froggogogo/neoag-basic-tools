@@ -15,7 +15,7 @@ ensure_neo_tools_env_local() {
     cp -a "$dest" "${dest}.bak_$(date +%Y%m%d_%H%M%S)"
   fi
   cp -a "$src" "$dest"
-  log "wrote ${dest} (BigMHC/DeepImmuno/MixMHCpred/PRIME/netChop overlay)"
+  log "wrote ${dest} (BigMHC/DeepImmuno/MixMHCpred/PRIME/netChop/NetMHCstabpan overlay)"
 }
 
 ensure_neo_immunogenicity_profile() {
