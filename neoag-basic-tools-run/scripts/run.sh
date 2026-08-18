@@ -120,7 +120,7 @@ rna-r1:     ${RNA_R1:-"(unset)"}
 skip-prod:  ${SKIP_PRODUCTION}
 DAG:
   dual/full: HLA队列 ∥ CNV队列
-  full:      同时开 RNA（Salmon→EasyFuse）
+  full:      同时开 RNA（STAR∥STAR-Fusion → Arriba → EasyFuse）
   then:      LOHHLA (HLA+CNV) ; SNAF→SpliceMutr (HLA+junctions)
   then:      VEP ; production
 ==========================

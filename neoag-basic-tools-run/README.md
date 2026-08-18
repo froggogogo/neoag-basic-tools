@@ -51,7 +51,7 @@ bash scripts/run.sh --yes \
 |------|------------------|------|
 | serial | &lt;12 核 或 &lt;48G | 全部串行 |
 | dual | ≥12 核且 ≥48G | CNV 队列 ∥ HLA 队列；RNA 在 DNA 之后 |
-| full | ≥20 核且 ≥96G | (CNV∥HLA) 与 RNA（Salmon→EasyFuse）同时开 |
+| full | ≥20 核且 ≥96G | (CNV∥HLA) 与 RNA（STAR∥SF → EasyFuse）同时开 |
 
 队列**内部**仍串行（与 sunbinbin 一致）。详见 [references/schedule.md](references/schedule.md)。
 

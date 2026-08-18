@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# RNA: EasyFuse-centric DAG (STAR/Arriba/STAR-Fusion/FusionCatcher run inside EasyFuse).
-# Built-in master preferred; case run_short_rna_all* only as legacy fallback.
+# RNA: STAR + Arriba + STAR-Fusion independently (BAM / pVACfuse);
+# EasyFuse for fusion meta (FusionCatcher only inside EasyFuse).
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
@@ -10,7 +10,7 @@ source "${SCRIPT_DIR}/lib/dispatch.sh"
 
 MASTER="${SCRIPT_DIR}/tools/rna/run_short_rna_master.sh"
 if [[ -f "$MASTER" ]]; then
-  log "RNA via built-in EasyFuse-centric master"
+  log "RNA via built-in master (STAR/Arriba/STAR-Fusion + EasyFuse; no standalone FusionCatcher)"
   STAGE=all CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-1}" FORCE="${FORCE:-0}" bash "$MASTER"
   exit $?
 fi

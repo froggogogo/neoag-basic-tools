@@ -26,7 +26,7 @@
 ### full
 
 - 条件：`nproc ≥ 20` 且 `mem_gb ≥ 96`
-- Wave A（并行）：HLA ∥ CNV ∥ RNA（内置 master：Salmon → EasyFuse）
+- Wave A（并行）：HLA ∥ CNV ∥ RNA（Salmon + STAR∥STAR-Fusion → Arriba → EasyFuse）
 - 然后：LOHHLA → SNAF → SpliceMutr → VEP → production
 
 ## 队列内部（始终串行）
@@ -48,15 +48,14 @@ Sequenza 不依赖病例旧 `run_sequenza_fit.R`：
 OptiType → SpecHLA → HLA-LA → consensus  
 产物：`hla/hla_consensus.txt`
 
-### RNA（内置 EasyFuse-centric master）
+### RNA（内置 master）
 
-- Wave1：Salmon（定量，skip-if-done）
-- Wave2：**EasyFuse**（融合 meta；内部含 STAR / Arriba / STAR-Fusion / FusionCatcher，**不再单独跑**）
-- Wave2b：`harvest_easyfuse_artifacts`（从 EasyFuse work 链接 STAR BAM / Arriba 等供下游）
-- Wave3 串行：RegTools → RSEM
-- 然后：pVACfuse、pVACsplice、evidence 汇总
+- Wave1 并行：Salmon + **STAR ∥ STAR-Fusion**（STAR BAM 给 RegTools/剪接；STAR-Fusion 原生表给 pVACfuse）
+- Wave2 并行：**Arriba** ∥ RegTools（Arriba 原生表给 pVACfuse）
+- Wave3 串行：**EasyFuse** → RSEM。FusionCatcher **不单独跑**（只在 EasyFuse 内）
+- 然后：pVACfuse（Arriba + STAR-Fusion）、pVACsplice、evidence 汇总
 
-病例仍提供 per-tool wrapper（`run_salmon_*`、`run_easyfuse_*`、`run_regtools_*` 等）；不再要求 `run_star_*` / `run_arriba_*` / `run_star_fusion_*` / `run_fusioncatcher_*`。
+病例需提供 `run_star_*`、`run_arriba_*`、`run_star_fusion_*`、`run_easyfuse_*`、`run_salmon_*`、`run_regtools_*`。**不需要** `run_fusioncatcher_*`。
 
 ## 依赖边
 
@@ -74,6 +73,6 @@ all evidence ─────→ production
 |----|----------|
 | CNV | CHUNK_JOBS=2, HMF_THREADS=4, JVM -Xmx24g |
 | HLA | OptiType 8, SpecHLA 8, HLA-LA 6 |
-| RNA | EasyFuse（内部并行）, CAP_LOAD=18 |
+| RNA | STAR 10, STAR-Fusion 8, EasyFuse, CAP_LOAD=18 |
 
 病例 wrapper 内可覆盖；run skill 不硬编码线程数。

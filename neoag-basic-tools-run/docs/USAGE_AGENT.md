@@ -42,5 +42,5 @@
 
 1. `bash scripts/probe_host.sh --json`
 2. case 下是否存在 `run_cnv_hla_parallel` 或 `run_hla_all` + `run_cnv_all`
-3. `short-rna/scripts/run_salmon_*` / `run_easyfuse_*` / `run_regtools_*` 等 + `inputs.env.sh`（融合仅 EasyFuse，不需单独 STAR/Arriba/SF/FC）
+3. `short-rna/scripts/run_star_*` / `run_arriba_*` / `run_star_fusion_*` / `run_easyfuse_*` 等 + `inputs.env.sh`（FusionCatcher 不单独跑）
 4. `--neo-root/scripts/generate_production_from_results_manifest.py` 存在

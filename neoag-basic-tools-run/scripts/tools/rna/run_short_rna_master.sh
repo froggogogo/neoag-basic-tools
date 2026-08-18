@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Built-in short-bulk RNA orchestrator (EasyFuse-centric).
+# Built-in short-bulk RNA orchestrator.
 #
-# Fusion: EasyFuse only (STAR / Arriba / STAR-Fusion / FusionCatcher run inside).
-# Downstream: harvest artifacts → regtools → RSEM → pVAC* → evidence.
+# Independent (needed downstream, EasyFuse does not publish them):
+#   STAR BAM → RegTools / SNAF / pVACsplice
+#   Arriba + STAR-Fusion native tables → pVACfuse
+# EasyFuse: fusion meta (includes FusionCatcher internally; do NOT run FC standalone).
 #
-# Per-tool scripts still come from the case via find_wrapper (sunbinbin-style).
+# Per-tool scripts come from the case via find_wrapper (sunbinbin-style).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -76,6 +78,41 @@ run_tool() {
   return 0
 }
 
+run_tool_bg() {
+  local tool="$1" rcfile="$2"
+  shift 2
+  (
+    set +e
+    "$@"
+    echo $? > "${rcfile}"
+  ) &
+  echo $!
+}
+
+wait_bg_tools() {
+  local item tool rcfile rc
+  wait || true
+  for item in "$@"; do
+    tool="${item%%:*}"
+    rcfile="${item#*:}"
+    rcfile="${rcfile%%:*}"
+    if [[ -f "${rcfile}" ]]; then
+      rc="$(cat "${rcfile}")"
+    else
+      rc=99
+    fi
+    if [[ "${rc}" != "0" ]]; then
+      record_fail "${tool}" "${rc}"
+    else
+      echo "[$(ts)] BG tool ${tool} OK"
+    fi
+  done
+  if [[ "${CONTINUE_ON_ERROR}" != "1" && "${RNA_FAILS}" -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
 invoke_wrapper() {
   local stem="$1"
   local w
@@ -85,45 +122,67 @@ invoke_wrapper() {
 }
 
 run_stem() {
-  local stem="$1"
-  if invoke_wrapper "$stem"; then
+  local stem
+  for stem in "$@"; do
+    if invoke_wrapper "$stem"; then
+      return 0
+    fi
+  done
+  echo "[$(ts)] WARN: no wrapper for $*" >&2
+  RNA_SKIPPED_STEPS+=("${1}:no_wrapper")
+  return 1
+}
+
+wave1_star_and_starfusion() {
+  echo "[$(ts)] ===== WAVE1: Salmon + STAR ∥ STAR-Fusion ====="
+  run_tool salmon run_stem salmon
+
+  local rcdir="${SHORT_RNA_ROOT}/logs/bg_rc_wave1_$$"
+  mkdir -p "${rcdir}"
+  local star_rc="${rcdir}/star.rc" sf_rc="${rcdir}/star_fusion.rc"
+
+  echo "[$(ts)] launching STAR in background"
+  run_tool_bg star "${star_rc}" run_stem star
+  echo "[$(ts)] launching STAR-Fusion in background"
+  run_tool_bg star_fusion "${sf_rc}" run_stem star_fusion star-fusion
+  echo "[$(ts)] waiting WAVE1 background jobs ..."
+  wait_bg_tools "star:${star_rc}" "star_fusion:${sf_rc}"
+}
+
+wave2_arriba_regtools() {
+  echo "[$(ts)] ===== WAVE2: Arriba ∥ RegTools ====="
+  if [[ ! -s "${SHORT_RNA_ROOT}/star/Aligned.sortedByCoord.out.bam" ]]; then
+    echo "[$(ts)] WARN: STAR BAM missing — skip Arriba/RegTools"
+    RNA_SKIPPED_STEPS+=("arriba:no_bam" "regtools:no_bam")
     return 0
   fi
-  echo "[$(ts)] WARN: no wrapper for ${stem}" >&2
-  RNA_SKIPPED_STEPS+=("${stem}:no_wrapper")
-  return 0
+  local rcdir="${SHORT_RNA_ROOT}/logs/bg_rc_wave2_$$"
+  mkdir -p "${rcdir}"
+  local a_rc="${rcdir}/arriba.rc" r_rc="${rcdir}/regtools.rc"
+  run_tool_bg arriba "${a_rc}" run_stem arriba
+  run_tool_bg regtools "${r_rc}" run_stem regtools
+  wait_bg_tools "arriba:${a_rc}" "regtools:${r_rc}"
 }
 
-wave_salmon() {
-  echo "[$(ts)] ===== WAVE1: Salmon (quant) ====="
-  run_tool salmon run_stem salmon
-}
-
-wave_easyfuse() {
-  echo "[$(ts)] ===== WAVE2: EasyFuse (fusion meta: STAR/Arriba/SF/FC inside) ====="
+wave3_easyfuse_rsem() {
+  echo "[$(ts)] ===== WAVE3: EasyFuse → RSEM (no standalone FusionCatcher) ====="
   if ! is_ubuntu_2204; then
     echo "[$(ts)] ERROR: EasyFuse requires Ubuntu 22.04" >&2
     record_fail easyfuse 2
-    return 0
+  else
+    run_tool easyfuse run_stem easyfuse
   fi
-  run_tool easyfuse run_stem easyfuse
-  run_tool harvest FORCE="${FORCE}" bash "${SCRIPT_DIR}/harvest_easyfuse_artifacts.sh"
-}
-
-wave_regtools_rsem() {
-  echo "[$(ts)] ===== WAVE3: RegTools → RSEM ====="
-  run_tool regtools run_stem regtools
   run_tool rsem run_stem rsem
 }
 
-wave_pvacfuse() {
-  echo "[$(ts)] ===== WAVE4: pVACfuse ====="
+wave4_pvacfuse() {
+  echo "[$(ts)] ===== WAVE4: pVACfuse (Arriba + STAR-Fusion if present) ====="
   run_tool pvacfuse run_stem pvacfuse
 }
 
-wave_pvacsplice() {
+wave5_pvacsplice() {
   echo "[$(ts)] ===== WAVE5: cis-splice → pVACsplice ====="
-  run_tool cis_splice run_stem cis_splice || run_tool cis_splice run_stem cis-splice || true
+  run_tool cis_splice run_stem cis_splice cis-splice
   run_tool pvacsplice run_stem pvacsplice
 }
 
@@ -145,31 +204,34 @@ print_status() {
   local mark
   mark() { [[ -f "$1" ]] && echo OK || echo MISSING; }
   cat <<EOF
---- short-RNA marker status (EasyFuse-centric) ---
+--- short-RNA marker status ---
 SHORT_RNA_ROOT : ${SHORT_RNA_ROOT}
 Salmon         : $(mark "${SHORT_RNA_ROOT}/salmon/.salmon.done")
+STAR           : $(mark "${SHORT_RNA_ROOT}/star/.star.done")
+STAR-Fusion    : $(mark "${SHORT_RNA_ROOT}/star-fusion/.star_fusion.done")
+Arriba         : $(mark "${SHORT_RNA_ROOT}/arriba/.arriba.done")
 EasyFuse       : $(mark "${SHORT_RNA_ROOT}/easyfuse/.easyfuse.done")
-STAR BAM       : $( [[ -s "${SHORT_RNA_ROOT}/star/Aligned.sortedByCoord.out.bam" ]] && echo OK || echo MISSING )
 RegTools       : $(mark "${SHORT_RNA_ROOT}/regtools/.regtools.done")
 RSEM           : $(mark "${SHORT_RNA_ROOT}/rsem/.rsem.done")
 pVACfuse       : $(mark "${SHORT_RNA_ROOT}/pvacfuse/.pvacfuse.done")
 pVACsplice     : $(mark "${SHORT_RNA_ROOT}/pvacsplice/.pvacsplice.done")
+FusionCatcher  : skipped (EasyFuse only)
 fails this run : ${RNA_FAILS}
 EOF
 }
 
 run_all() {
-  wave_salmon
-  wave_easyfuse
-  wave_regtools_rsem
-  wave_pvacfuse
-  wave_pvacsplice
+  wave1_star_and_starfusion
+  wave2_arriba_regtools
+  wave3_easyfuse_rsem
+  wave4_pvacfuse
+  wave5_pvacsplice
   run_evidence
   print_status
 }
 
 echo "================================================================"
-echo "neoag short-RNA MASTER (EasyFuse-centric) $(ts)"
+echo "neoag short-RNA MASTER $(ts)"
 echo "  STAGE=${STAGE} FORCE=${FORCE} CONTINUE_ON_ERROR=${CONTINUE_ON_ERROR}"
 echo "  SHORT_RNA_ROOT=${SHORT_RNA_ROOT}"
 echo "  MASTER_LOG=${MASTER_LOG}"
@@ -178,17 +240,23 @@ echo "================================================================"
 case "${STAGE}" in
   status) print_status ;;
   all) run_all ;;
-  wave1|salmon) wave_salmon; print_status ;;
-  wave2|easyfuse) wave_easyfuse; print_status ;;
-  wave3) wave_regtools_rsem; print_status ;;
-  wave4|pvacfuse) wave_pvacfuse; print_status ;;
-  wave5|pvacsplice) wave_pvacsplice; print_status ;;
+  wave1|star) wave1_star_and_starfusion; print_status ;;
+  wave2|arriba) wave2_arriba_regtools; print_status ;;
+  wave3|easyfuse) wave3_easyfuse_rsem; print_status ;;
+  wave4|pvacfuse) wave4_pvacfuse; print_status ;;
+  wave5|pvacsplice) wave5_pvacsplice; print_status ;;
+  salmon) run_tool salmon run_stem salmon; print_status ;;
+  star_fusion|star-fusion) run_tool star_fusion run_stem star_fusion star-fusion; print_status ;;
   regtools) run_tool regtools run_stem regtools; print_status ;;
   rsem) run_tool rsem run_stem rsem; print_status ;;
-  harvest) run_tool harvest FORCE="${FORCE}" bash "${SCRIPT_DIR}/harvest_easyfuse_artifacts.sh"; print_status ;;
   evidence) run_evidence; print_status ;;
+  fusioncatcher)
+    echo "[$(ts)] SKIP FusionCatcher standalone — use EasyFuse only" >&2
+    RNA_SKIPPED_STEPS+=("fusioncatcher:easyfuse_only")
+    print_status
+    ;;
   *)
-    echo "ERROR: STAGE must be status|all|wave1-5|salmon|easyfuse|regtools|rsem|harvest|pvacfuse|pvacsplice|evidence" >&2
+    echo "ERROR: STAGE must be status|all|wave1-5|salmon|star|star_fusion|arriba|easyfuse|regtools|rsem|pvacfuse|pvacsplice|evidence" >&2
     exit 2
     ;;
 esac

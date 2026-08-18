@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Best-effort: link STAR BAM / Arriba / STAR-Fusion outputs from EasyFuse work dirs
-# so regtools / pVACfuse / evidence can reuse them without standalone caller runs.
+# Best-effort fallback only. Prefer independent STAR / Arriba / STAR-Fusion wrappers;
+# this script does not overwrite existing case artifacts (FORCE=0).
 set -euo pipefail
 
 SHORT_RNA_ROOT="${SHORT_RNA_ROOT:?SHORT_RNA_ROOT required}"

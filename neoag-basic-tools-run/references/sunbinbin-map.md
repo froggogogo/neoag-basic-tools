@@ -13,7 +13,7 @@ Gold case（最完整）：
 | `scripts/run_cnv_hla_parallel_sunbinbin.sh` | hla + cnv | `RUN_CNV=0 RUN_HLA=1` 或反之可拆分 |
 | `scripts/run_sequenza_steps.sh` | sequenza | 运行 skill **优先用** `$DEPS_DIR/tools/sequenza/` 的 gold 副本（chrom-split fit + NUL-safe bam2seqz）；病例脚本仅作 fallback |
 | `scripts/run_lohhla_sunbinbin.sh` | lohhla | 需 HLA + purity |
-| `short-rna/scripts/run_short_rna_master`（内置）或 per-tool `run_salmon_*` / `run_easyfuse_*` 等 | rna | Salmon→EasyFuse→RegTools→RSEM→pVAC* |
+| 内置 `run_short_rna_master` + per-tool `run_star_*` / `run_arriba_*` / `run_star_fusion_*` / `run_easyfuse_*` | rna | STAR∥SF → Arriba → EasyFuse（无独立 FC）→ pVAC* |
 | `short-rna/scripts/run_snaf_*` / case snaf | snaf | junction → 候选 |
 | `scripts/run_splicemutr_patient_*` | splicemutr | SNAF txt → NetMHCpan |
 | `scripts/run_vep_somatic_*` | vep | somatic VCF 注释 |
