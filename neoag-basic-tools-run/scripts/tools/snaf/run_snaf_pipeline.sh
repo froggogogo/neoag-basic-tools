@@ -96,13 +96,21 @@ if [[ "$SKIP_ALTANALYZE" != "1" ]]; then
     )
   fi
   echo "==> AltAnalyze identify bam sample=${SAMPLE} (single BAM, no fake replicate)"
+  set +e
   docker run --rm "${mounts[@]}" "$IMAGE" identify bam "$THREADS"
+  aa_rc=$?
+  set -e
   provenance_symlink_bam
-else
-  # Resume path: still replace 0-byte leftovers if the real BAM is present.
-  if [[ -e "$WORK/bam/${SAMPLE}.bam" && ! -s "$WORK/bam/${SAMPLE}.bam" ]]; then
-    provenance_symlink_bam
+  if [[ ! -s "$FULL" ]] || [[ "$(wc -l < "$FULL")" -le 2 ]]; then
+    echo "ERROR: AltAnalyze docker rc=${aa_rc} and no usable counts.original.full" >&2
+    exit 1
   fi
+  if [[ "$aa_rc" != "0" ]]; then
+    echo "==> WARN: AltAnalyze docker rc=${aa_rc} (single-sample PSI/EventAnnotation often fails); continuing with counts.original.full"
+  fi
+else
+  # Resume path: replace 0-byte leftovers with a real BAM symlink.
+  provenance_symlink_bam
 fi
 
 # Prefer full matrix. pruned is often header-only for a single sample (dPSI=0).
