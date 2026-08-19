@@ -26,7 +26,7 @@ bash scripts/probe_host.sh
 - `scripts/run_hla_all_*` 或 `run_cnv_hla_parallel_*`（HLA / 其它 CNV）
 - `short-rna/scripts/run_star_*`、`run_arriba_*`、`run_star_fusion_*`、`run_easyfuse_*`、`run_salmon_*`、`run_regtools_*` 等 + `short-rna/inputs.env.sh`（FusionCatcher 不单独跑）
 
-可选：`run_lohhla_*`、`run_snaf_*`、`run_splicemutr_patient_*`、`run_vep_somatic_*`
+可选：`run_lohhla_*`、`run_vep_somatic_*`。SNAF / SpliceMutr 优先用 skill 内置 gold 脚本（不必再依赖病例旧 `run_snaf_*`）。
 
 ## 4. 预览
 

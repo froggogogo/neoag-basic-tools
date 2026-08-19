@@ -14,7 +14,7 @@ Gold case（最完整）：
 | `scripts/run_sequenza_steps.sh` | sequenza | 运行 skill **优先用** `$DEPS_DIR/tools/sequenza/` 的 gold 副本（chrom-split fit + NUL-safe bam2seqz）；病例脚本仅作 fallback |
 | `scripts/run_lohhla_sunbinbin.sh` | lohhla | 需 HLA + purity |
 | 内置 `run_short_rna_master` + per-tool `run_star_*` / `run_arriba_*` / `run_star_fusion_*` / `run_easyfuse_*` | rna | STAR∥SF → Arriba → EasyFuse（无独立 FC）→ pVAC* |
-| `short-rna/scripts/run_snaf_*` / case snaf | snaf | junction → 候选 |
+| 内置 `scripts/tools/snaf/run_snaf_pipeline.sh` | snaf | 单份 STAR BAM + `SJ.out.tab` 门控；禁止 fake replicate；coord start≤end。病例旧 `run_snaf_*` 仅 fallback |
 | `scripts/run_splicemutr_patient_*` | splicemutr | SNAF txt → NetMHCpan |
 | `scripts/run_vep_somatic_*` | vep | somatic VCF 注释 |
 | `production_from_results_manifest_*/run_production.sh` | production | manifest + runner |

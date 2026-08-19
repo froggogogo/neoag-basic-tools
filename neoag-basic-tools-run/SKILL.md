@@ -70,9 +70,11 @@ HLA OptiType→SpecHLA→HLA-LA; RNA STAR∥STAR-Fusion then Arriba/RegTools the
 1. **HLA** + **CNV** (parallel per schedule)
 2. **RNA** short-bulk (parallel in `full` mode)
 3. **LOHHLA** (needs HLA + purity)
-4. **SNAF** → **SpliceMutr** (needs HLA + junctions). Helper
-   `scripts/tools/splicemutr/prepare_splicemutr_candidates.py` **forces
-   genomic start≤end** (SNAF coord may be donor–acceptor order).
+4. **SNAF** → **SpliceMutr** (needs HLA + junctions). SNAF gold path is
+   `scripts/tools/snaf/run_snaf_pipeline.sh` (single STAR BAM, **no**
+   fake `sample_replicate`, STAR `SJ.out.tab` gate, genomic start≤end).
+   SpliceMutr helper `scripts/tools/splicemutr/prepare_splicemutr_candidates.py`
+   also forces start≤end.
 5. **VEP** (optional if `--somatic-vcf` set)
 6. **production** — overlay neo `tools.env.local.sh` + sarcoma immunogenicity
    sources（PRIME / BigMHC-IM / DeepImmuno；IEDB 仅 NetMHCpan 失败时兜底），呈递含
