@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import csv
 import os
+import re
 from pathlib import Path
 
 import pandas as pd
 import snaf
+
+COORD_RE = re.compile(r"^([^:]+):(\d+)-(\d+)(\([+-]\))?$")
 
 
 def required_env(name: str) -> str:
@@ -37,19 +40,67 @@ def _results_all_none(jcmq) -> bool:
     return all(item is None for item in first)
 
 
+def rewrite_coord_string(coord: str) -> tuple[str, bool]:
+    """Force genomic start-end order: chrN:start-end(strand) with start<=end."""
+    text = str(coord).strip()
+    match = COORD_RE.match(text)
+    if not match:
+        return str(coord), False
+    chrom, start_s, end_s, strand = match.groups()
+    start_i, end_i = int(start_s), int(end_s)
+    if start_i <= end_i:
+        return text, False
+    return f"{chrom}:{end_i}-{start_i}{strand or ''}", True
+
+
 def genomic_span(coord: str) -> tuple[str, str, str, bool]:
     """Parse SNAF coord and return chrom, genomic start, end (start<=end)."""
-    chrom = coord.split(":", 1)[0] if ":" in coord else ""
-    span = coord.split(":", 1)[1].split("(", 1)[0] if ":" in coord else ""
+    rewritten, swapped = rewrite_coord_string(coord)
+    chrom = rewritten.split(":", 1)[0] if ":" in rewritten else ""
+    span = rewritten.split(":", 1)[1].split("(", 1)[0] if ":" in rewritten else ""
     start, end = (span.split("-", 1) + [""])[:2] if span else ("", "")
+    return chrom, start, end, swapped
+
+
+def rewrite_coord_column(path: Path) -> int:
+    if not path.is_file() or path.stat().st_size == 0:
+        return 0
+    with path.open(encoding="utf-8", errors="replace", newline="") as handle:
+        rows = [line.rstrip("\n").split("\t") for line in handle]
+    if not rows:
+        return 0
     try:
-        start_i, end_i = int(start), int(end)
-    except ValueError:
-        return chrom, start, end, False
-    swapped = start_i > end_i
-    if swapped:
-        start_i, end_i = end_i, start_i
-    return chrom, str(start_i), str(end_i), swapped
+        idx = next(i for i, name in enumerate(rows[0]) if name.strip().lower() == "coord")
+    except StopIteration:
+        return 0
+    n_swapped = 0
+    for row in rows[1:]:
+        if len(row) <= idx:
+            continue
+        new_value, swapped = rewrite_coord_string(row[idx])
+        n_swapped += int(swapped)
+        row[idx] = new_value
+    if n_swapped:
+        with path.open("w", encoding="utf-8", newline="") as handle:
+            for row in rows:
+                handle.write("\t".join(row) + "\n")
+    return n_swapped
+
+
+def normalize_snaf_coord_tables(outdir: Path) -> None:
+    targets = [
+        outdir / "frequency_stage0_verbosity1_uid_gene_symbol_coord_mean_mle.txt",
+        outdir / "T_candidates" / "T_antigen_candidates_all.txt",
+    ]
+    targets.extend(sorted((outdir / "T_candidates").glob("T_antigen_candidates_*.txt")))
+    seen: set[Path] = set()
+    for path in targets:
+        if path in seen:
+            continue
+        seen.add(path)
+        n_swapped = rewrite_coord_column(path)
+        if n_swapped:
+            print(f"normalized coord start<=end in {path} swapped={n_swapped}", flush=True)
 
 
 def main() -> int:
@@ -145,6 +196,7 @@ def main() -> int:
     snaf.JunctionCountMatrixQuery.generate_results(
         path=str(outdir / "after_prediction.p"), outdir=str(outdir)
     )
+    normalize_snaf_coord_tables(outdir)
 
     source = outdir / "T_candidates" / f"T_antigen_candidates_{sample_id}.txt"
     if not source.is_file():
