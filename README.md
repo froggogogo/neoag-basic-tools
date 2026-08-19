@@ -17,7 +17,7 @@ Cursor 个人 Skill 应对这两个目录分别建入口（各一份 `SKILL.md`�
 ## 用法
 
 ```bash
-git clone git@github.com:froggogogo/neoag-skills.git
+git clone git@github.com:froggogogo/neoag-basic-tools.git neoag-skills
 cd neoag-skills
 
 # 1) 安装（每台机器一次）

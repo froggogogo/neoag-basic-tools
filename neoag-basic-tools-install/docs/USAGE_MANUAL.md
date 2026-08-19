@@ -15,10 +15,8 @@
 
 ```bash
 # 1) 克隆仓库后进入【安装】目录（运行 Skill 是旁边的 neoag-basic-tools-run）
-git clone git@github.com:froggogogo/neoag-skills.git
+git clone git@github.com:froggogogo/neoag-basic-tools.git neoag-skills
 cd neoag-skills/neoag-basic-tools-install
-# 若仍用旧 remote：
-# git clone git@github.com:froggogogo/neoag-private.git neoag-skills && cd neoag-skills/neoag-basic-tools-install
 
 # 2) 预览（不写盘）
 bash scripts/install.sh --mode plan

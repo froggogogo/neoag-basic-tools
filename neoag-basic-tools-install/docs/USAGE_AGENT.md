@@ -28,7 +28,7 @@ Miniforge 与 env 落在共享盘：
 1. 确认已挂载 /mnt/neoag_100T，且目录可读：
    /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps
 2. 若本机还没有本 skill，克隆仓库后进入安装目录（不要用运行 Skill 目录）：
-   git clone git@github.com:froggogogo/neoag-skills.git
+   git clone git@github.com:froggogogo/neoag-basic-tools.git neoag-skills
    cd neoag-skills/neoag-basic-tools-install
 3. 先执行：
    bash scripts/install.sh --mode plan
