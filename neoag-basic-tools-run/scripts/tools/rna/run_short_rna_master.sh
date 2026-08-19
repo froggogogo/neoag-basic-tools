@@ -86,12 +86,21 @@ run_tool_bg() {
     "$@"
     echo $? > "${rcfile}"
   ) &
-  echo $!
+  echo $! > "${rcfile}.pid"
 }
 
 wait_bg_tools() {
-  local item tool rcfile rc
-  wait || true
+  # args: tool:rcfile — wait those PIDs only (not the tee coproc)
+  local item tool rcfile pid rc
+  for item in "$@"; do
+    tool="${item%%:*}"
+    rcfile="${item#*:}"
+    pid=""
+    [[ -f "${rcfile}.pid" ]] && pid="$(tr -d '[:space:]' < "${rcfile}.pid")"
+    if [[ "${pid}" =~ ^[0-9]+$ ]]; then
+      wait "${pid}" || true
+    fi
+  done
   for item in "$@"; do
     tool="${item%%:*}"
     rcfile="${item#*:}"
