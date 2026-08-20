@@ -65,11 +65,14 @@ run skill `stages/production.sh` 等价逻辑，但：
 
 ```bash
 CASE=/mnt/zzbnew/.../neoag/NEW_SAMPLE
-rsync -a sunbinbin/scripts/ "$CASE/scripts/"
+# 优先用 NAS 通用模板（已去掉 134 硬编码 NEOAG_ROOT）
+rsync -a /mnt/zzbnew/peixunban/gl/mjx/neoag/shared_scripts/case_templates/ "$CASE/scripts/"
 rsync -a sunbinbin/short-rna/scripts/ "$CASE/short-rna/scripts/"
 cp sunbinbin/short-rna/inputs.env.sh "$CASE/short-rna/"
-# 编辑 PATIENT_ID、FASTQ、BAM 路径
+# 编辑 PATIENT_ID、FASTQ、BAM 路径；运行时 export CASE_ROOT TUMOR_BAM NORMAL_BAM
 ```
+
+脚本通过 `lib_portable_env.sh` 解析本机 `NEOAG_ROOT`（66: `/root/neo/src/na0707_upload_release`；134: `/home/na/project/...`）。见 [templates/README.md](../scripts/templates/README.md)。
 
 然后：
 

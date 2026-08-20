@@ -176,6 +176,23 @@ run_chrom() {
   mv "${tmp}" "${seqz}"
 }
 
+bin_one_chrom() {
+  local chrom="$1"
+  local safe
+  safe="$(echo "${chrom}" | tr ':/-' '___')"
+  local seqz="${OUTDIR}/chrom/${SAMPLE_ID}.${safe}.seqz.gz"
+  local small="${OUTDIR}/chrom_binned/${SAMPLE_ID}.${safe}.small.seqz.gz"
+  if [[ -s "${small}" && "${FORCE}" != "1" ]] && gzip -t "${small}" 2>/dev/null; then
+    echo "[$(date -Is)] reuse binned ${chrom} -> ${small}"
+    return 0
+  fi
+  echo "[$(date -Is)] seqz_binning ${chrom}"
+  "${SEQUENZA_BIN}/sequenza-utils" seqz_binning \
+    -s "${seqz}" -w "${BIN_WINDOW}" -T "${TABIX}" -o "${small}.tmp"
+  gzip -t "${small}.tmp"
+  mv "${small}.tmp" "${small}"
+}
+
 do_pileup() {
   if [[ -s "${BINNED}" && -f "${DONE_PILEUP}" && "${FORCE}" != "1" ]]; then
     echo "[$(date -Is)] sequenza pileup already done -> ${BINNED}"
@@ -198,28 +215,38 @@ do_pileup() {
     fi
   done
 
-  echo "[$(date -Is)] merge chrom seqz"
+  # Bin per chromosome then merge small seqz.
+  # Do NOT concat raw chrom seqz then bin: missing newlines at chr
+  # boundaries produce lines with >14 fields (ValueError in seqz_binning).
+  echo "[$(date -Is)] seqz_binning per chromosome"
+  mkdir -p "${OUTDIR}/chrom_binned"
+  export -f bin_one_chrom
+  export BIN_WINDOW TABIX SEQUENZA_BIN
+  # shellcheck disable=SC2086
+  printf "%s\n" ${CHROMS} | xargs -I{} -P "${CHUNK_JOBS}" bash -c "bin_one_chrom \"{}\""
+
+  echo "[$(date -Is)] merge binned seqz -> ${BINNED}"
   {
     first=1
     for chrom in ${CHROMS}; do
       safe="$(echo "${chrom}" | tr ':/-' '___')"
-      f="${OUTDIR}/chrom/${SAMPLE_ID}.${safe}.seqz.gz"
+      f="${OUTDIR}/chrom_binned/${SAMPLE_ID}.${safe}.small.seqz.gz"
+      [[ -s "$f" ]] || { echo "ERROR missing binned $f" >&2; exit 1; }
       if [[ "$first" == 1 ]]; then
-        zcat "$f"
+        gzip -dc "$f"
         first=0
       else
-        zcat "$f" | tail -n +2
+        gzip -dc "$f" | tail -n +2
       fi
+      # guarantee a newline between chroms even if a file omits the last NL
+      printf '\n'
     done
-  } | gzip -c > "${MERGED}.tmp"
-  gzip -t "${MERGED}.tmp"
-  mv "${MERGED}.tmp" "${MERGED}"
-
-  echo "[$(date -Is)] seqz_binning"
-  run_env sequenza-utils seqz_binning -s "${MERGED}" -w "${BIN_WINDOW}" -T "${TABIX}" -o "${BINNED}.tmp"
+  } | awk 'NF==0{next} /^chromosome/{if(seen++) next} {print}' \
+    | gzip -c > "${BINNED}.tmp"
+  gzip -t "${BINNED}.tmp"
   mv "${BINNED}.tmp" "${BINNED}"
   date -Is > "${DONE_PILEUP}"
-  echo "[$(date -Is)] sequenza pileup done"
+  echo "[$(date -Is)] sequenza pileup done (per-chrom bin + merge small)"
 }
 
 do_fit() {

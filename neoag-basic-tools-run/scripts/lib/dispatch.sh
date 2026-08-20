@@ -9,6 +9,7 @@ find_wrapper() {
   for cand in \
     "${CASE_ROOT}/scripts/run_${stem}.sh" \
     "${CASE_ROOT}/scripts/run_${stem}_${SAMPLE_ID}.sh" \
+    "${CASE_ROOT}/scripts/run_${stem}_sunbinbin.sh" \
     "${CASE_ROOT}/short-rna/scripts/run_${stem}.sh" \
     "${CASE_ROOT}/short-rna/scripts/run_${stem}_${SAMPLE_ID}.sh" \
     "${CASE_ROOT}/short-rna/scripts/run_${stem}_all.sh" \
