@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Portable Sequenza pileup + fit (sunbinbin 2026-08-17 gold path).
-# pileup: per-chrom bam2seqz (NUL-safe) → merge → seqz_binning
-# fit:    chrom-split fread Rscript
+# pileup: per-chrom bam2seqz (NUL-safe) → merge raw chrom seqz → seqz_binning (may emit fake .gz)
+# fit:    chrom-split fread Rscript (resolves fake .gz by magic bytes)
+# Do NOT per-chrom bin then gzip -dc merge — binning output is often plain TSV named .gz.
 set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -176,23 +177,6 @@ run_chrom() {
   mv "${tmp}" "${seqz}"
 }
 
-bin_one_chrom() {
-  local chrom="$1"
-  local safe
-  safe="$(echo "${chrom}" | tr ':/-' '___')"
-  local seqz="${OUTDIR}/chrom/${SAMPLE_ID}.${safe}.seqz.gz"
-  local small="${OUTDIR}/chrom_binned/${SAMPLE_ID}.${safe}.small.seqz.gz"
-  if [[ -s "${small}" && "${FORCE}" != "1" ]] && gzip -t "${small}" 2>/dev/null; then
-    echo "[$(date -Is)] reuse binned ${chrom} -> ${small}"
-    return 0
-  fi
-  echo "[$(date -Is)] seqz_binning ${chrom}"
-  "${SEQUENZA_BIN}/sequenza-utils" seqz_binning \
-    -s "${seqz}" -w "${BIN_WINDOW}" -T "${TABIX}" -o "${small}.tmp"
-  gzip -t "${small}.tmp"
-  mv "${small}.tmp" "${small}"
-}
-
 do_pileup() {
   if [[ -s "${BINNED}" && -f "${DONE_PILEUP}" && "${FORCE}" != "1" ]]; then
     echo "[$(date -Is)] sequenza pileup already done -> ${BINNED}"
@@ -215,38 +199,31 @@ do_pileup() {
     fi
   done
 
-  # Bin per chromosome then merge small seqz.
-  # Do NOT concat raw chrom seqz then bin: missing newlines at chr
-  # boundaries produce lines with >14 fields (ValueError in seqz_binning).
-  echo "[$(date -Is)] seqz_binning per chromosome"
-  mkdir -p "${OUTDIR}/chrom_binned"
-  export -f bin_one_chrom
-  export BIN_WINDOW TABIX SEQUENZA_BIN
-  # shellcheck disable=SC2086
-  printf "%s\n" ${CHROMS} | xargs -I{} -P "${CHUNK_JOBS}" bash -c "bin_one_chrom \"{}\""
-
-  echo "[$(date -Is)] merge binned seqz -> ${BINNED}"
+  echo "[$(date -Is)] merge chrom seqz"
   {
     first=1
     for chrom in ${CHROMS}; do
       safe="$(echo "${chrom}" | tr ':/-' '___')"
-      f="${OUTDIR}/chrom_binned/${SAMPLE_ID}.${safe}.small.seqz.gz"
-      [[ -s "$f" ]] || { echo "ERROR missing binned $f" >&2; exit 1; }
+      f="${OUTDIR}/chrom/${SAMPLE_ID}.${safe}.seqz.gz"
       if [[ "$first" == 1 ]]; then
-        gzip -dc "$f"
+        zcat "$f"
         first=0
       else
-        gzip -dc "$f" | tail -n +2
+        zcat "$f" | tail -n +2
       fi
-      # guarantee a newline between chroms even if a file omits the last NL
+      # Newline between chrom blocks avoids merged-line field unpack errors at binning.
       printf '\n'
     done
-  } | awk 'NF==0{next} /^chromosome/{if(seen++) next} {print}' \
-    | gzip -c > "${BINNED}.tmp"
-  gzip -t "${BINNED}.tmp"
+  } | gzip -c > "${MERGED}.tmp"
+  gzip -t "${MERGED}.tmp"
+  mv "${MERGED}.tmp" "${MERGED}"
+
+  echo "[$(date -Is)] seqz_binning"
+  run_env sequenza-utils seqz_binning -s "${MERGED}" -w "${BIN_WINDOW}" -T "${TABIX}" -o "${BINNED}.tmp"
+  # Output is often plain TSV named .gz; do not gzip -t here — R fit resolves via magic bytes.
   mv "${BINNED}.tmp" "${BINNED}"
   date -Is > "${DONE_PILEUP}"
-  echo "[$(date -Is)] sequenza pileup done (per-chrom bin + merge small)"
+  echo "[$(date -Is)] sequenza pileup done"
 }
 
 do_fit() {

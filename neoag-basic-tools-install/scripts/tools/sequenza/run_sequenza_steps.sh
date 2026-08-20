@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Portable Sequenza pileup + fit (sunbinbin 2026-08-17 gold path).
-# pileup: per-chrom bam2seqz (NUL-safe) → merge → seqz_binning
-# fit:    chrom-split fread Rscript
+# pileup: per-chrom bam2seqz (NUL-safe) → merge raw chrom seqz → seqz_binning (may emit fake .gz)
+# fit:    chrom-split fread Rscript (resolves fake .gz by magic bytes)
+# Do NOT per-chrom bin then gzip -dc merge — binning output is often plain TSV named .gz.
 set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -210,6 +211,7 @@ do_pileup() {
       else
         zcat "$f" | tail -n +2
       fi
+      printf '\n'
     done
   } | gzip -c > "${MERGED}.tmp"
   gzip -t "${MERGED}.tmp"

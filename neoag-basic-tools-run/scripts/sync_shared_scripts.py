@@ -329,7 +329,7 @@ def main() -> None:
 |------|------|
 | `case_templates/` | DNA: HLA, CNV, LOHHLA, VEP, pVACseq, sliding |
 | `short_rna_templates/` | RNA per-tool wrappers + `inputs.env.sh.template` |
-| `sequenza/` | Sequenza pileup/fit (per-chrom bin + fread fit) |
+| `sequenza/` | Sequenza pileup/fit (sunbinbin gold: merge raw → binning → fread fit) |
 | `rna/` | Built-in `run_short_rna_master.sh` |
 | `snaf/` | SNAF pipeline |
 | `splicemutr/` | SpliceMutr patient runner |

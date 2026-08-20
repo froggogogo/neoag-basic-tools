@@ -211,7 +211,7 @@ export SOMATIC_VCF=/path/to/somatic.pass.vcf.gz   # 可为空则跳过 somatic �
 |------|------|
 | HLA + CNV | `run_cnv_hla_parallel.sh` 内建两队列 |
 | RNA Wave1 | STAR 与 STAR-Fusion 后台并行（见 `run_short_rna_all.sh`） |
-| Sequenza | 按染色体 pileup，`CHUNK_JOBS=2`；**不要**对合并后的 20G raw seqz 整体 binning（用 `sequenza/run_sequenza_steps.sh` per-chrom bin 版） |
+| Sequenza | 按染色体 pileup，`CHUNK_JOBS=2`；合并 raw chrom seqz（染色体间补换行）→ 对 merged 做 `seqz_binning`；**不要** per-chrom bin 再 `gzip -dc` 合并（bin 产物常为假 `.gz`） |
 | 三机分工 | 例如 134 跑 Sequenza，66 跑 RNA，避免同机抢满 20 核 |
 
 ---
@@ -306,7 +306,7 @@ tail -f "$CASE/logs/"*.log
 
 1. 看哪一步没有 `.done` 或 log 里最后 ERROR。
 2. 只重跑失败 stage；已完成的不要 `FORCE=1` 除非确需覆盖。
-3. Sequenza：pileup 已有 `chrom/*.seqz.gz` 时会 reuse；binning 失败用 **per-chrom bin** 版 runner 从 `SEQUENZA_STEP=pileup` 或 `fit` 续跑。
+3. Sequenza：pileup 已有 `chrom/*.seqz.gz` 时会 reuse；用 `shared_scripts/sequenza/run_sequenza_steps.sh`（sunbinbin 金路径：merge raw → binning → fread fit）。假 `.gz` 由 R fit 处理，勿用 `gzip -dc` 合并 binned 文件。
 4. RNA：`run_short_rna_all.sh` 支持从中间 wave 续跑（视病例总控是否实现 `STAGE=`）。
 
 **常见问题**
@@ -314,7 +314,8 @@ tail -f "$CASE/logs/"*.log
 | 现象 | 处理 |
 |------|------|
 | `tools.env.sh: No such file` | 未用 portable env；确保 wrapper 含 `lib_portable_env.sh`，或 `source $DEPS/configs/bootstrap_case.sh` |
-| Sequenza `too many values to unpack (expected 14)` | 合并 raw chrom seqz 再 binning；改用 `shared_scripts/sequenza/run_sequenza_steps.sh` |
+| Sequenza `too many values to unpack (expected 14)` | 合并 raw chrom 时缺换行；用 `shared_scripts/sequenza/run_sequenza_steps.sh`（已含染色体间 `\n`） |
+| Sequenza `gzip: not in gzip format` on binned merge | 误用 per-chrom bin + `gzip -dc`；改回 sunbinbin 金路径，fit 用 `run_sequenza_fit.R` |
 | EasyFuse 失败 | 仅 Ubuntu 22.04；134 若为 20.04 则 RNA 融合用 66 |
 | pVAC 失败 TF/Keras | 勿 `TF_USE_LEGACY_KERAS=1`；用 `neoag-pvactools711` 环境 |
 | 磁盘满 | 临时目录必须在 `$CASE/tmp`，勿写 `/tmp` |
