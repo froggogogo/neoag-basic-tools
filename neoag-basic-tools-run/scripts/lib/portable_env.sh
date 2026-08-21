@@ -41,6 +41,7 @@ _neoag_try_root() {
 
 if [[ -z "${NEOAG_ROOT:-}" || ! -f "${NEOAG_ROOT}/conf/tools.env.sh" ]]; then
   _picked=0
+  # Host-local neo checkouts only (134 may still use /home/na/...; never as primary).
   for _c in \
     "${NEOAG_ROOT:-}" \
     "/root/neo/src/na0707_upload_release" \

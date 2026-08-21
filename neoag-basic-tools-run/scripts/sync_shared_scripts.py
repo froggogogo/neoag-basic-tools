@@ -157,13 +157,17 @@ def sync_dna_templates() -> list[str]:
     dst = SHARED / "case_templates"
     dst.mkdir(parents=True, exist_ok=True)
     shutil.copy2(PORTABLE_ENV, dst / "lib_portable_env.sh")
-    for name in ("lib_tool_timing.sh", "lib_site_defaults.sh"):
-        if (SUN_DNA / name).is_file():
-            shutil.copy2(SUN_DNA / name, dst / name)
+    # lib_* copied after skill_templates is resolved
+
     # Prefer skill-maintained portable templates when present (override sunbinbin gold).
     skill_templates = _SKILL_ROOT / "templates"
     if not skill_templates.is_dir():
         skill_templates = Path(__file__).resolve().parent / "templates"
+    for name in ("lib_tool_timing.sh", "lib_site_defaults.sh"):
+        if (skill_templates / name).is_file():
+            shutil.copy2(skill_templates / name, dst / name)
+        elif (SUN_DNA / name).is_file():
+            shutil.copy2(SUN_DNA / name, dst / name)
     synced = []
     seen_generic: set[str] = set()
     for src in sorted(SUN_DNA.glob("*.sh")):

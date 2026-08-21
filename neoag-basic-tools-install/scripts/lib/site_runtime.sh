@@ -79,9 +79,7 @@ neoag_resolve_tools_root() {
     "/root/neo/envs/tools" \
     "/root/neo/env_tool/tools" \
     "/root/neo/envs" \
-    "/root/neo/env_tool" \
-    "/home/na/project/neoantigen/neoag_event_pipeline_v03_rc_artifact_quarantine_20260622_091158/tools" \
-    "/home/na/project/neoantigen/neoag_event_pipeline_v03_rc/tools"
+    "/root/neo/env_tool"
   do
     [[ -n "$c" && -d "$c" ]] || continue
     inner="$c"
@@ -100,12 +98,11 @@ neoag_resolve_chr_fasta() {
   local deps="${NEOAG_BASIC_DEPS_DIR}"
   local assembly="${deps}/refs/hg38/Homo_sapiens_assembly38.fasta"
   local seqz="${deps}/refs/sequenza/reference/GRCh38.primary_assembly.chr.fa"
-  local quarantine="/home/na/project/neoantigen/neoag_event_pipeline_v03_rc_artifact_quarantine_20260622_091158/data/ref/hg38/Homo_sapiens_assembly38.fasta"
   local pick="" contig
 
   export SEQUENZA_REF_FASTA="${SEQUENZA_REF_FASTA:-${seqz}}"
 
-  for pick in "${NEOAG_REFERENCE_FASTA:-}" "${REF_FASTA:-}" "$seqz" "$quarantine" "$assembly"; do
+  for pick in "${NEOAG_REFERENCE_FASTA:-}" "${REF_FASTA:-}" "$seqz" "$assembly"; do
     [[ -n "$pick" && -s "$pick" ]] || continue
     contig="$(_neoag_first_chr_contig "$pick" || true)"
     if [[ "${contig}" == chr* ]]; then
@@ -449,7 +446,40 @@ neoag_site_activate() {
   elif [[ -f "${deps}/tools/neodata_tools/LOHHLA/LOHHLAscript.R" ]]; then
     export LOHHLA_HOME="${LOHHLA_HOME:-${deps}/tools/neodata_tools/LOHHLA}"
   fi
-  export PURPLE_REF_DIR="${deps}/refs/hmf/purple_reference"
+  # FACETS helper (runFACETS.R) + snp-pileup from deps FACETS conda tree
+  if [[ -f "${deps}/tools/facets/runFACETS.R" ]]; then
+    export FACETS_HOME="${FACETS_HOME:-${deps}/tools/facets}"
+  fi
+  local snp_pileup=""
+  for snp_pileup in \
+    "${SNP_PILEUP_BIN:-}" \
+    "${deps}/tools/neodata_tools/FACETS/.conda/bin/snp-pileup" \
+    "${NEOAG_CONDA_BASE:-}/envs/neoag-facets/bin/snp-pileup"
+  do
+    [[ -n "${snp_pileup}" && -x "${snp_pileup}" ]] || continue
+    export SNP_PILEUP_BIN="${snp_pileup}"
+    break
+  done
+  # HMF tools reference bundle (AMBER/COBALT/PURPLE)
+  if [[ -d "${deps}/refs/hmf/purple_reference/amber" ]]; then
+    export HMFTOOLS_REF_ROOT="${HMFTOOLS_REF_ROOT:-${deps}/refs/hmf/purple_reference}"
+    export PURPLE_REF_DIR="${PURPLE_REF_DIR:-${deps}/refs/hmf/purple_reference}"
+  fi
+  # pVACtools / VEP convenience aliases used by case wrappers
+  if [[ -n "${NEOAG_PVAC_ENV:-}" ]]; then
+    export PVAC_ENV="${PVAC_ENV:-${NEOAG_PVAC_ENV}}"
+  fi
+  if [[ -n "${VEP_BIN:-}" ]]; then
+    export NEOAG_VEP_BIN="${NEOAG_VEP_BIN:-${VEP_BIN}}"
+  fi
+  if [[ -d "${NEOAG_VEP_PLUGINS:-}" ]]; then
+    :
+  elif [[ -f "${NEOAG_PVAC_ENV:-}/lib/python3.11/site-packages/pvactools/tools/pvacseq/VEP_plugins/Wildtype.pm" ]]; then
+    export NEOAG_VEP_PLUGINS="${NEOAG_PVAC_ENV}/lib/python3.11/site-packages/pvactools/tools/pvacseq/VEP_plugins"
+  fi
+  if [[ -x "${NEOAG_CONDA_BASE:-}/envs/neoag-tools/bin/bcftools" ]]; then
+    export BCFTOOLS="${BCFTOOLS:-${NEOAG_CONDA_BASE}/envs/neoag-tools/bin/bcftools}"
+  fi
   export SEQUENZA_GC_WIGGLE="${SEQUENZA_GC_WIGGLE:-${deps}/refs/sequenza/reference/Homo_sapiens.GRCh38.dna.primary_assembly.chr.gc50.wig.gz}"
   if [[ ! -s "${SEQUENZA_GC_WIGGLE}" && -s "${deps}/refs/sequenza/reference/GRCh38.gc50.wig.gz" ]]; then
     export SEQUENZA_GC_WIGGLE="${deps}/refs/sequenza/reference/GRCh38.gc50.wig.gz"
