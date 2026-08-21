@@ -65,7 +65,8 @@ item "tool:HLA-LA" "${HLALA_HOME:-}"
 item "tool:SpecHLA" "${SPECHLA_HOME:-}"
 item "env:spechla_env" "${SPECHLA_ENV:-${SPECHLA_HOME:-}/spechla_env}"
 item "tool:SpecHLA_script" "${SPECHLA_HOME:-}/script"
-item "tool:SpecHLA_db" "${SPECHLA_HOME:-}/db"if [[ "$ef" -eq 1 ]]; then
+item "tool:SpecHLA_db" "${SPECHLA_HOME:-}/db"
+if [[ "$ef" -eq 1 ]]; then
   item "tool:EasyFuse" "${NEOAG_EASYFUSE_HOME:-}"
 else
   skip "tool:EasyFuse" "not Ubuntu 22.04"
