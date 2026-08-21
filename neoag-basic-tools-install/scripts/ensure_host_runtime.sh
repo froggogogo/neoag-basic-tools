@@ -162,6 +162,46 @@ ensure_salmon_cpp() {
   conda_frontend create -y -n neoag-salmon-cpp -c bioconda -c conda-forge salmon=1.10.3 || warn "salmon-cpp create failed"
 }
 
+# SpecHLA conda prefix is NOT named neoag-*; unpack beside host miniforge envs.
+ensure_spechla_env() {
+  local dest="${CONDA_BASE}/envs/spechla_env"
+  local home="${DEPS_DIR}/tools/neodata_tools/SpecHLA"
+  # Shared deps layout: expose script/bin/db expected by run_spechla*.sh
+  if [[ -d "${home}/source/script" && ! -e "${home}/script" ]]; then
+    ln -sfn source/script "${home}/script" 2>/dev/null || true
+  fi
+  if [[ -d "${home}/source/bin" && ! -e "${home}/bin" ]]; then
+    ln -sfn source/bin "${home}/bin" 2>/dev/null || true
+  fi
+  if [[ ! -e "${home}/db" && -d "${DEPS_DIR}/refs/hla/spechla/db" ]]; then
+    ln -sfn "${DEPS_DIR}/refs/hla/spechla/db" "${home}/db" 2>/dev/null || true
+  fi
+  if [[ -d "${dest}/bin" ]]; then
+    ok "spechla_env already present -> ${dest}"
+    export SPECHLA_ENV="${dest}"
+    return 0
+  fi
+  # Prefer existing gold prefix on this host (134)
+  local gold
+  for gold in \
+    /home/na/project/neoantigen/neoag_event_pipeline_v03_rc/tools/SpecHLA/spechla_env \
+    /root/neo/envs/tools/SpecHLA/spechla_env \
+    /root/neo/env_tool/tools/SpecHLA/spechla_env
+  do
+    if [[ -d "${gold}/bin" ]]; then
+      ok "using gold spechla_env -> ${gold}"
+      export SPECHLA_ENV="${gold}"
+      return 0
+    fi
+  done
+  if unpack_conda_pack spechla_env && [[ -d "${dest}/bin" ]]; then
+    export SPECHLA_ENV="${dest}"
+    return 0
+  fi
+  warn "spechla_env missing (need conda-pack spechla_env.tar.gz in ${PACK_DIR} or gold tree)"
+  return 1
+}
+
 LARGE_ENVS="neoag-tools neoag-fusion neoag-splicemutr neoag-snaf neoag-pvactools711 neoag-vep neoag-gatk neoag-optitype"
 
 is_large_env() {
@@ -251,6 +291,7 @@ main() {
   ensure_samtools19 || true
   ensure_star_in_fusion || true
   ensure_salmon_cpp || true
+  ensure_spechla_env || true
 
   local name
   for name in neoag-tools neoag-fusion neoag-splice neoag-splicemutr neoag-sequenza neoag-vep neoag-gatk neoag-snaf neoag-optitype neoag-pvactools711; do

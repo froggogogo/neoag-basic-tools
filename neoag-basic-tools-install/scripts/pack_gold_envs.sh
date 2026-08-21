@@ -29,17 +29,18 @@ for n in neoag-snaf neoag-splice neoag-splicemutr neoag-salmon-cpp neoag-fusion 
          neoag-optitype neoag-pvactools711 neoag-samtools19; do
   [[ -d "${CONDA_BASE}/envs/${n}" ]] && default_names+=("$n")
 done
+# SpecHLA uses a prefix env next to the tool tree (not under envs/ by default)
+SPECHLA_GOLD="${SPECHLA_GOLD:-/home/na/project/neoantigen/neoag_event_pipeline_v03_rc/tools/SpecHLA/spechla_env}"
 
 IFS=',' read -r -a want <<<"${NAMES}"
 if [[ -z "$NAMES" ]]; then
   want=("${default_names[@]}")
+  [[ -d "${SPECHLA_GOLD}/bin" ]] && want+=("spechla_env")
 fi
 
 log "packing on $(hostname) conda=${CONDA_BASE} -> ${PACK_DIR}"
 for name in "${want[@]}"; do
   [[ -n "$name" ]] || continue
-  src="${CONDA_BASE}/envs/${name}"
-  [[ -d "$src" ]] || { warn "skip missing ${name}"; continue; }
   out="${PACK_DIR}/${name}.tar.gz"
   if [[ -s "$out" ]]; then
     ok "already packed: $out"
@@ -47,6 +48,22 @@ for name in "${want[@]}"; do
   fi
   tmp="/tmp/neoag_pack_${name}.tar.gz"
   rm -f "$tmp"
+  if [[ "$name" == "spechla_env" ]]; then
+    src="${SPECHLA_GOLD}"
+    [[ -d "$src/bin" ]] || { warn "skip missing spechla_env gold ${src}"; continue; }
+    log "conda-pack -p spechla_env <- ${src}"
+    if "$PACK_BIN" -p "$src" -o "$tmp" --ignore-editable-packages --ignore-missing-files; then
+      mv -f "$tmp" "$out"
+      chmod a+rw "$out" || true
+      ok "packed ${name} $(du -h "$out" | awk '{print $1}')"
+    else
+      rm -f "$tmp"
+      warn "pack failed: ${name}"
+    fi
+    continue
+  fi
+  src="${CONDA_BASE}/envs/${name}"
+  [[ -d "$src" ]] || { warn "skip missing ${name}"; continue; }
   log "conda-pack ${name} (may take a while)"
   if "$PACK_BIN" -n "$name" -o "$tmp" --ignore-editable-packages --ignore-missing-files; then
     mv -f "$tmp" "$out"

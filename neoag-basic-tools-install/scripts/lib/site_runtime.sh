@@ -321,6 +321,46 @@ neoag_set_easyfuse_os() {
   fi
 }
 
+# SpecHLA: code+db live on shared deps; spechla_env must be a local conda prefix
+# (FUSE neoag_100T is a bad place for conda envs). Prefer host unpack / gold tree.
+neoag_resolve_spechla() {
+  local deps="${1:-${NEOAG_BASIC_DEPS_DIR}}"
+  local home cand
+  home="${deps}/tools/neodata_tools/SpecHLA"
+  if [[ ! -d "${home}" && -d "${NEOAG_TOOLS_ROOT:-}/SpecHLA" ]]; then
+    home="${NEOAG_TOOLS_ROOT}/SpecHLA"
+  fi
+  # Portable deps may ship only source/; expose script/bin/db the runners expect.
+  if [[ -d "${home}/source/script" && ! -e "${home}/script" ]]; then
+    ln -sfn source/script "${home}/script" 2>/dev/null || true
+  fi
+  if [[ -d "${home}/source/bin" && ! -e "${home}/bin" ]]; then
+    ln -sfn source/bin "${home}/bin" 2>/dev/null || true
+  fi
+  if [[ ! -e "${home}/db" ]]; then
+    if [[ -d "${deps}/refs/hla/spechla/db" ]]; then
+      ln -sfn "${deps}/refs/hla/spechla/db" "${home}/db" 2>/dev/null || true
+    elif [[ -d "${deps}/refs/hla/spechla" && -f "${deps}/refs/hla/spechla/HLA_FREQ_HLA_I_II.dat" ]]; then
+      ln -sfn "${deps}/refs/hla/spechla" "${home}/db" 2>/dev/null || true
+    fi
+  fi
+  export SPECHLA_HOME="${home}"
+  export SPECHLA_DB="${SPECHLA_DB:-${deps}/refs/hla/spechla}"
+  for cand in \
+    "${SPECHLA_ENV:-}" \
+    "${NEOAG_CONDA_BASE:-}/envs/spechla_env" \
+    "${NEOAG_TOOLS_ROOT:-}/SpecHLA/spechla_env" \
+    /home/na/project/neoantigen/neoag_event_pipeline_v03_rc/tools/SpecHLA/spechla_env \
+    /root/neo/envs/tools/SpecHLA/spechla_env \
+    /root/neo/env_tool/tools/SpecHLA/spechla_env \
+    "${home}/spechla_env"
+  do
+    [[ -n "${cand}" && -d "${cand}/bin" ]] || continue
+    export SPECHLA_ENV="${cand}"
+    break
+  done
+}
+
 # Pick the first predictor tree that contains a sentinel file.
 # Prefers install-deps complete copies over incomplete liup trees
 # (sunbinbin 20260814 BigMHC was models/ only — no src/predict.py).
@@ -445,14 +485,11 @@ neoag_site_activate() {
 
   export HLALA_CONDA_BIN="${deps}/tools/neodata_tools/HLA-LA/.conda/bin"
   export HLALA_HOME="${deps}/tools/neodata_tools/HLA-LA/.conda/opt/hla-la"
-  export SPECHLA_HOME="${deps}/tools/neodata_tools/SpecHLA"
   if [[ ! -d "${HLALA_HOME}" && -d "${NEOAG_TOOLS_ROOT}/HLA-LA" ]]; then
     export HLALA_HOME="${NEOAG_TOOLS_ROOT}/HLA-LA"
     export HLALA_CONDA_BIN="${NEOAG_TOOLS_ROOT}/HLA-LA/.conda/bin"
   fi
-  if [[ ! -d "${SPECHLA_HOME}" && -d "${NEOAG_TOOLS_ROOT}/SpecHLA" ]]; then
-    export SPECHLA_HOME="${NEOAG_TOOLS_ROOT}/SpecHLA"
-  fi
+  neoag_resolve_spechla "${deps}"
 
   export CONDA_PKGS_DIRS="${deps}/packages/conda_pkgs"
   export PIP_CACHE_DIR="${deps}/packages/pip_cache"
