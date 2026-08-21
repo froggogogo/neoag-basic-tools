@@ -443,6 +443,12 @@ neoag_site_activate() {
   export OPTITYPE_REFERENCE="${deps}/refs/hla/optitype_reference"
   export POLYSOLVER_HOME="${deps}/refs/lohhla/polysolver"
   export NOVOALIGN_LICENSE_FILE="${deps}/refs/lohhla/novoalign.lic"
+  # LOHHLA R scripts + hla.dat (copied into deps; do not hardcode 134 /home/na)
+  if [[ -f "${deps}/tools/lohhla/LOHHLAscript.R" ]]; then
+    export LOHHLA_HOME="${LOHHLA_HOME:-${deps}/tools/lohhla}"
+  elif [[ -f "${deps}/tools/neodata_tools/LOHHLA/LOHHLAscript.R" ]]; then
+    export LOHHLA_HOME="${LOHHLA_HOME:-${deps}/tools/neodata_tools/LOHHLA}"
+  fi
   export PURPLE_REF_DIR="${deps}/refs/hmf/purple_reference"
   export SEQUENZA_GC_WIGGLE="${SEQUENZA_GC_WIGGLE:-${deps}/refs/sequenza/reference/Homo_sapiens.GRCh38.dna.primary_assembly.chr.gc50.wig.gz}"
   if [[ ! -s "${SEQUENZA_GC_WIGGLE}" && -s "${deps}/refs/sequenza/reference/GRCh38.gc50.wig.gz" ]]; then

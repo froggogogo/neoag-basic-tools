@@ -143,23 +143,58 @@ def write_executable(path: Path, content: str) -> None:
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
+def _sunbinbin_alias(generic_name: str) -> str:
+    """Deprecated name kept only as a thin forwarder to the generic template."""
+    return (
+        "#!/usr/bin/env bash\n"
+        f"# Deprecated alias: use {generic_name} (shared template, not case-specific).\n"
+        'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
+        f'exec bash "${{SCRIPT_DIR}}/{generic_name}" "$@"\n'
+    )
+
+
 def sync_dna_templates() -> list[str]:
     dst = SHARED / "case_templates"
     dst.mkdir(parents=True, exist_ok=True)
     shutil.copy2(PORTABLE_ENV, dst / "lib_portable_env.sh")
     for name in ("lib_tool_timing.sh", "lib_site_defaults.sh"):
-        shutil.copy2(SUN_DNA / name, dst / name)
+        if (SUN_DNA / name).is_file():
+            shutil.copy2(SUN_DNA / name, dst / name)
+    # Prefer skill-maintained portable templates when present (override sunbinbin gold).
+    skill_templates = _SKILL_ROOT / "templates"
+    if not skill_templates.is_dir():
+        skill_templates = Path(__file__).resolve().parent / "templates"
     synced = []
+    seen_generic: set[str] = set()
     for src in sorted(SUN_DNA.glob("*.sh")):
         if src.name.startswith("lib_"):
             continue
         raw = src.read_text(encoding="utf-8", errors="replace")
         new, _ = patch_text(raw, dna=True)
-        write_executable(dst / src.name, new)
         if src.name.endswith("_sunbinbin.sh"):
-            generic = dst / src.name.replace("_sunbinbin.sh", ".sh")
-            write_executable(generic, new)
-        synced.append(src.name)
+            generic_name = src.name.replace("_sunbinbin.sh", ".sh")
+        else:
+            generic_name = src.name
+        skill_override = skill_templates / generic_name
+        if skill_override.is_file():
+            new = skill_override.read_text(encoding="utf-8")
+        write_executable(dst / generic_name, new)
+        seen_generic.add(generic_name)
+        # Keep *_sunbinbin.sh only as thin alias → generic name (compat for old callers).
+        if src.name.endswith("_sunbinbin.sh") or (SUN_DNA / f"{Path(generic_name).stem}_sunbinbin.sh").is_file():
+            write_executable(dst / f"{Path(generic_name).stem}_sunbinbin.sh", _sunbinbin_alias(generic_name))
+        synced.append(generic_name)
+    # Skill-only templates (e.g. portable run_lohhla.sh) not present under sunbinbin/
+    if skill_templates.is_dir():
+        for src in sorted(skill_templates.glob("*.sh")):
+            if src.name in seen_generic:
+                continue
+            write_executable(dst / src.name, src.read_text(encoding="utf-8"))
+            write_executable(
+                dst / f"{src.stem}_sunbinbin.sh",
+                _sunbinbin_alias(src.name),
+            )
+            synced.append(src.name)
     return synced
 
 
@@ -175,10 +210,16 @@ def sync_rna_templates() -> list[str]:
             continue
         raw = src.read_text(encoding="utf-8", errors="replace")
         new, _ = patch_text(raw, dna=False)
-        write_executable(dst / src.name, new)
         if src.name.endswith("_sunbinbin.sh"):
-            generic = dst / src.name.replace("_sunbinbin.sh", ".sh")
-            write_executable(generic, new)
+            generic_name = src.name.replace("_sunbinbin.sh", ".sh")
+            write_executable(dst / generic_name, new)
+            write_executable(dst / src.name, _sunbinbin_alias(generic_name))
+        else:
+            write_executable(dst / src.name, new)
+            alias = dst / f"{src.stem}_sunbinbin.sh"
+            # Only create alias if gold tree also had a sunbinbin twin historically.
+            if (SUN_RNA / f"{src.stem}_sunbinbin.sh").is_file() or src.name.endswith("_sunbinbin.sh"):
+                write_executable(alias, _sunbinbin_alias(src.name))
         synced.append(src.name)
     # inputs template
     inp = (ROOT / "sunbinbin/short-rna/inputs.env.sh").read_text(encoding="utf-8", errors="replace")
@@ -329,10 +370,16 @@ def main() -> None:
 |------|------|
 | `case_templates/` | DNA: HLA, CNV, LOHHLA, VEP, pVACseq, sliding |
 | `short_rna_templates/` | RNA per-tool wrappers + `inputs.env.sh.template` |
-| `sequenza/` | Sequenza pileup/fit (sunbinbin gold: merge raw → binning → fread fit) |
+| `sequenza/` | Sequenza pileup/fit（金路径：merge raw → binning → fread fit） |
 | `rna/` | Built-in `run_short_rna_master.sh` |
 | `snaf/` | SNAF pipeline |
 | `splicemutr/` | SpliceMutr patient runner |
+
+## 命名（重要）
+
+请只用通用名：`run_lohhla.sh`、`run_hla_all.sh` …  
+历史上的 `*_sunbinbin.sh` **仅是兼容别名**（`exec` 到同名通用脚本），不是第二套逻辑。  
+`sunbinbin` 只是早期金标准病例名，共享模板不应再按病例命名。
 
 ## 新病例
 
@@ -345,8 +392,8 @@ export PATIENT_ID TUMOR_BAM NORMAL_BAM SOMATIC_VCF
 bash "$CASE/scripts/run_hla_all.sh"
 ```
 
-运行前 **必须** export 样本 BAM/VCF；脚本不再默认 sunbinbin 的 zjl 路径。
-NEOAG_ROOT 由 `lib_portable_env.sh` / `bootstrap_case.sh` 按主机解析。
+运行前 **必须** export 样本 BAM/VCF。  
+`POLYSOLVER_HOME` / `LOHHLA_HOME` / `NOVOALIGN_LICENSE_FILE` 由 `lib_portable_env.sh` + neoag_100T `site.env.sh` 解析（勿写死 `/home/na/...`）。
 
 同步：`python3 sync_shared_scripts.py`（neoag-basic-tools-run/scripts/）
 """,
