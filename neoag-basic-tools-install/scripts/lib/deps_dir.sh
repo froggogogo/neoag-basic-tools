@@ -61,6 +61,7 @@ write_deps_readme() {
 | refs/ | 参考基因组、索引、VEP cache、HLA DB、EasyFuse/CTAT 等 |
 | licenses/ | 需许可证的安装包（NetMHCpan 等），由管理员放入 |
 | packages/ | conda/pip/installer 缓存 |
+| licenses/predictors/ | netMHCpan, netMHCstabpan(DTU), netchop, prime, mixMHCpred, bigmhc, DeepImmuno |
 | tools/ | 第三方工具源码/二进制树 |
 | software/ | 可选共享 Miniforge |
 | configs/ | site.env.sh 等机器无关配置 |

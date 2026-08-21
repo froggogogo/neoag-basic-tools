@@ -21,6 +21,7 @@ declare -a VERIFY_MARKERS=(
   "refs/lohhla/novoalign.lic|Novoalign license|OPTIONAL_LICENSED|file"
   "licenses/predictors/netMHCpan|NetMHCpan|OPTIONAL_LICENSED|dir"
   "licenses/predictors/netMHCstabpan/Linux_x86_64/bin/netMHCstabpan|NetMHCstabpan DTU binary|OPTIONAL_LICENSED|file"
+  "licenses/predictors/netchop/netchop-3.1/Linux_x86_64/bin/netChop|NetChop binary|OPTIONAL_LICENSED|file"
   "licenses/predictors/bigmhc/src/predict.py|BigMHC-IM predict.py|OPTIONAL_LICENSED|file"
   "licenses/predictors/DeepImmuno/deepimmuno-cnn.py|DeepImmuno-CNN|OPTIONAL_LICENSED|file"
   "licenses/predictors/mixMHCpred_install/MixMHCpred|MixMHCpred|OPTIONAL_LICENSED|file"
