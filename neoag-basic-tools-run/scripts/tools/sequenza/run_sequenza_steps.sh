@@ -189,12 +189,18 @@ do_pileup() {
   printf "%s\n" ${CHROMS} | xargs -I{} -P "${CHUNK_JOBS}" bash -c "run_chrom \"{}\""
 
   echo "[$(date -Is)] validate chrom seqz"
-  local chrom safe f
+  local chrom safe f last_nf
   for chrom in ${CHROMS}; do
     safe="$(echo "${chrom}" | tr ':/-' '___')"
     f="${OUTDIR}/chrom/${SAMPLE_ID}.${safe}.seqz.gz"
     if [[ ! -s "$f" ]] || ! gzip -t "$f" 2>/dev/null; then
       echo "ERROR missing/invalid chrom seqz $f" >&2
+      exit 1
+    fi
+    # gzip -t can pass on truncated content; seqz rows must have 14 fields
+    last_nf="$(zcat "$f" | tail -n 1 | awk -F'\t' '{print NF}')"
+    if [[ "${last_nf}" != "14" ]]; then
+      echo "ERROR truncated/bad last line NF=${last_nf} in $f (need 14); delete and re-run bam2seqz" >&2
       exit 1
     fi
   done
