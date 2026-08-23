@@ -10,7 +10,19 @@ source "${_SCRIPT_DIR}/lib_portable_env.sh"
 source "${_SCRIPT_DIR}/lib_site_defaults.sh"
 resolve_ref_fasta
 ROOT="${NEOAG_ROOT}"
-export PATH="${ROOT}/bin:${PATH}"
+DEPS="${NEOAG_BASIC_DEPS_DIR:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps}"
+HMFTOOLS_BIN=""
+for _hmf in \
+  "${DEPS}/tools/neodata_tools/HMFTOOLS/.conda/bin" \
+  "${ROOT}/tools/HMFTOOLS/.conda/bin"
+do
+  [[ -x "${_hmf}/amber" ]] && HMFTOOLS_BIN="${_hmf}" && break
+done
+if [[ -n "${HMFTOOLS_BIN}" ]]; then
+  export PATH="${HMFTOOLS_BIN}:${PATH}"
+else
+  export PATH="${ROOT}/bin:${PATH}"
+fi
 
 PATIENT_ID="${PATIENT_ID:?ERROR: set PATIENT_ID}"
 TUMOR_SAMPLE="${TUMOR_SAMPLE_ID:-${PATIENT_ID}_tumor}"

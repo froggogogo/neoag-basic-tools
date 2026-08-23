@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# =============================================================================
+# NeoAg 通用病例配置 — 换病人时只改本文件「样本区」
+#
+# 用法:
+#   cp case.config.sh.template case.config.sh
+#   vim case.config.sh   # 填样本路径
+#   source case.config.sh
+#
+# 依赖: neoag-basic-tools-install-deps 已安装 (site.env.sh)
+# =============================================================================
+
+# --- 样本区（必填）-----------------------------------------------------------
+export PATIENT_ID="${PATIENT_ID:-CHANGE_ME}"          # 例: jinganxin
+export TUMOR_BAM="${TUMOR_BAM:?set TUMOR_BAM}"        # WGS tumor BAM (.bai 同目录)
+export NORMAL_BAM="${NORMAL_BAM:?set NORMAL_BAM}"       # WGS normal/blood BAM
+export SOMATIC_VCF="${SOMATIC_VCF:-}"                 # 预计算 PASS VCF（可空，下游 handoff 会报错）
+
+# --- 病例目录（bootstrap 后自动设置，通常不用改）-----------------------------
+export CASE_ROOT="${CASE_ROOT:-/mnt/zzbnew/peixunban/gl/mjx/neoag/${PATIENT_ID}}"
+export SHORT_RNA_ROOT="${SHORT_RNA_ROOT:-${CASE_ROOT}/short-rna}"
+
+# --- RNA（有 short-bulk RNA 时填写）------------------------------------------
+export RNA_SAMPLE_ID="${RNA_SAMPLE_ID:-}"             # 例: ML150026284_L01_389
+export RNA_FASTQ1="${RNA_FASTQ1:-}"
+export RNA_FASTQ2="${RNA_FASTQ2:-}"
+
+# --- 运行参数（可选）---------------------------------------------------------
+export CHUNK_JOBS="${CHUNK_JOBS:-2}"                  # Sequenza/CNV 并行 chrom 数
+export HMF_THREADS="${HMF_THREADS:-4}"
+export HMFTOOLS_JVM_MEM="${HMFTOOLS_JVM_MEM:--Xmx24g}"
+export CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-1}"      # CNV/HLA 单工具失败是否继续
+
+# --- 阶段开关（1=跑，0=跳过）------------------------------------------------
+export RUN_DNA_PREREQ="${RUN_DNA_PREREQ:-1}"            # CNV||HLA + LOHHLA
+export RUN_DNA_DOWNSTREAM="${RUN_DNA_DOWNSTREAM:-1}"      # VEP/pVAC/sliding
+export RUN_SHORT_RNA="${RUN_SHORT_RNA:-1}"
+export RUN_SNAF="${RUN_SNAF:-1}"
+export RUN_SPLICEMUTR="${RUN_SPLICEMUTR:-1}"
+export RUN_PRODUCTION="${RUN_PRODUCTION:-0}"              # 默认不跑 production_runner
+
+# --- 共享资源根（通常不用改）-------------------------------------------------
+export NEOAG_BASIC_DEPS_DIR="${NEOAG_BASIC_DEPS_DIR:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps}"
+export NEODATA_ROOT="${NEODATA_ROOT:-/mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git}"
+export SHARED_SCRIPTS="${SHARED_SCRIPTS:-/mnt/zzbnew/peixunban/gl/mjx/neoag/shared_scripts}"
+
+# --- 临时目录（必须在 NAS case 下，禁止 /tmp）--------------------------------
+export TMPDIR="${TMPDIR:-${CASE_ROOT}/tmp}"
+export TEMP="${TEMP:-${TMPDIR}}"
+export TMP="${TMP:-${TMPDIR}}"

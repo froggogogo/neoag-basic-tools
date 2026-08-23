@@ -264,11 +264,15 @@ def sync_sequenza() -> list[str]:
     dst = SHARED / "sequenza"
     dst.mkdir(parents=True, exist_ok=True)
     synced = []
-    for src in [SUN_DNA / "run_sequenza_steps.sh", SKILL_SEQ / "run_sequenza_steps.sh"]:
+    # Prefer skill gold path over live sunbinbin (may be stale per-chrom bin version).
+    for src in [SKILL_SEQ / "run_sequenza_steps.sh", SUN_DNA / "run_sequenza_steps.sh"]:
         if src.is_file():
             raw = src.read_text(encoding="utf-8", errors="replace")
             write_executable(dst / "run_sequenza_steps.sh", raw)
+            # run_cnv_all calls $CASE/scripts/run_sequenza_steps.sh — keep case_templates in sync
+            write_executable(SHARED / "case_templates" / "run_sequenza_steps.sh", raw)
             synced.append("run_sequenza_steps.sh")
+            synced.append("case_templates/run_sequenza_steps.sh")
             break
     for name in ("bam2seqz_nulsafe.py", "run_sequenza_fit.R"):
         for src in [SUN_DNA / name, SKILL_SEQ / name, DEPS / "tools/sequenza" / name]:
