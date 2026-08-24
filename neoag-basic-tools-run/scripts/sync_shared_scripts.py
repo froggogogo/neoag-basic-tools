@@ -134,6 +134,13 @@ def patch_text(text: str, *, dna: bool = True) -> tuple[str, dict[str, int]]:
     )
     stats["vcf_fallback"] = 1 if n else 0
     t = t2
+    # FACETS snp-pileup: neoag-100T only (never zjl neodata4git)
+    t = t.replace(
+        'export SNP_PILEUP_BIN="${SNP_PILEUP_BIN:-/mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git/tools/FACETS/.conda/bin/snp-pileup}"',
+        'export SNP_PILEUP_BIN="${SNP_PILEUP_BIN:-${NEOAG_BASIC_DEPS_DIR:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps}/tools/neodata_tools/FACETS/.conda/bin/snp-pileup}"',
+    )
+    t = t.replace("/mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git/tools/FACETS/.conda/bin/snp-pileup",
+                  "${NEOAG_BASIC_DEPS_DIR:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps}/tools/neodata_tools/FACETS/.conda/bin/snp-pileup")
     return t, stats
 
 
@@ -240,6 +247,30 @@ def sync_rna_templates() -> list[str]:
         'export NEOAG_TOOLS_ROOT="${NEOAG_TOOLS_ROOT:-}"',
     )
     inp = inp.replace('export PATIENT_ID="${PATIENT_ID:-sunbinbin}"', 'export PATIENT_ID="${PATIENT_ID:?set PATIENT_ID}"')
+    # Never ship zjl / sunbinbin sample defaults into the portable template.
+    inp = re.sub(
+        r'export RNA_FASTQ1="\$\{RNA_FASTQ1:-[^}]+\}"',
+        'export RNA_FASTQ1="${RNA_FASTQ1:?set RNA_FASTQ1}"',
+        inp,
+    )
+    inp = re.sub(
+        r'export RNA_FASTQ2="\$\{RNA_FASTQ2:-[^}]+\}"',
+        'export RNA_FASTQ2="${RNA_FASTQ2:?set RNA_FASTQ2}"',
+        inp,
+    )
+    inp = inp.replace(
+        'export NEODATA_ROOT="${NEODATA_ROOT:-/mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git}"',
+        'export NEODATA_ROOT="${NEODATA_ROOT:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps}"',
+    )
+    inp = inp.replace("${NEODATA_ROOT}/data/rna/", "${NEODATA_ROOT}/refs/rna/")
+    inp = inp.replace("${NEODATA_ROOT}/data/ref/ctat/", "${NEODATA_ROOT}/refs/ctat/")
+    inp = inp.replace("${NEODATA_ROOT}/data/easyfuse/", "${NEODATA_ROOT}/refs/easyfuse/")
+    inp = re.sub(r'/mnt/zjl-bgi-zzb[^\n" ]*', '', inp)
+    inp = re.sub(
+        r'#\s*envs=/root/neo/envs\s+data=.*',
+        '#       refs/tools: /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps',
+        inp,
+    )
     (dst / "inputs.env.sh.template").write_text(inp, encoding="utf-8")
     synced.append("inputs.env.sh.template")
     readme = """# short_rna_templates

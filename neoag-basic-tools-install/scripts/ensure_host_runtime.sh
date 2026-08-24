@@ -286,11 +286,16 @@ copy_tool_tree_if_missing() {
 
 ensure_mhcflurry_shim() {
   local mf
-  for mf in \
-    "${HOME}/.local/share/mhcflurry" \
-    /root/.local/share/mhcflurry \
-    /home/na/.local/share/mhcflurry \
+  local mfs=(
+    "${HOME}/.local/share/mhcflurry"
+    /root/.local/share/mhcflurry
     "${DEPS_DIR}/packages/mhcflurry_data"
+  )
+  local _ips=" $(hostname -I 2>/dev/null || true) "
+  if [[ "${_ips}" == *" 10.200.50.134 "* ]]; then
+    mfs+=(/home/na/.local/share/mhcflurry)
+  fi
+  for mf in "${mfs[@]}"
   do
     [[ -d "$mf" ]] || continue
     if [[ -d "${mf}/4/2.0.0/models_class1_presentation" && ! -e "${mf}/2.0.0" ]]; then
