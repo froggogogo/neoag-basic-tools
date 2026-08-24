@@ -44,8 +44,7 @@ VEP_CACHE="${VEP_CACHE:-${NEOAG_VEP_CACHE:-}}"
 if [[ -z "${VEP_CACHE}" || ! -d "${VEP_CACHE}/homo_sapiens" ]]; then
   for c in \
     "${NEOAG_BASIC_DEPS_DIR:-}/refs/vep" \
-    "${NEOAG_VEP_CACHE:-}" \
-    "/mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git/data/vep"; do
+    "${NEOAG_VEP_CACHE:-}"; do
     [[ -n "${c}" && -d "${c}/homo_sapiens" ]] && VEP_CACHE="${c}" && break
   done
 fi

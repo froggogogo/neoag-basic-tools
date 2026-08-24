@@ -34,7 +34,7 @@ Modes:
 Options:
   --deps-dir DIR          统一依赖目录（默认 /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps）
   --conda-dir DIR         Conda 安装目录（未发现时使用；--one-shot 默认装到 deps/software/miniforge3）
-  --asset-source DIR      资产源（默认 /mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git）
+  --asset-source DIR      资产源（默认即 --deps-dir；禁止默认 zjl）
   --neo-src DIR           neo 流水线源码
   --sync-mode MODE        copy|symlink|auto（默认 copy：资产落入 neoag_100T，不依赖 zjl 可读）
   --one-shot              推荐：copy + envs + tool-scripts + 本机 conda（不往 FUSE 盘装 miniforge）
@@ -62,7 +62,7 @@ EOF
 MODE="install"
 DEPS_DIR="${DEFAULT_DEPS_DIR}"
 CONDA_DIR=""
-ASSET_SOURCE="/mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git"
+ASSET_SOURCE=""
 NEO_SRC=""
 SYNC_MODE="copy"
 WITH_ENVS=0
@@ -107,6 +107,8 @@ if [[ "$ONE_SHOT" == "1" ]]; then
 fi
 
 export MODE DEPS_DIR CONDA_DIR ASSET_SOURCE NEO_SRC SYNC_MODE
+ASSET_SOURCE="${ASSET_SOURCE:-${DEPS_DIR}}"
+export ASSET_SOURCE
 export WITH_ENVS WITH_TOOL_SCRIPTS CONTINUE_ON_ERROR ALLOW_ROOT_CONDA YES
 export PREFER_DEPS_CONDA FORCE_RESYNC ONE_SHOT
 
@@ -206,7 +208,6 @@ main() {
     plan)
       print_plan
       if [[ -d "/mnt/neoag_100T" ]]; then ok "neoag_100T 挂载可见"; else warn "未见 /mnt/neoag_100T"; fi
-      if [[ -d "/mnt/zjl-bgi-zzb" ]]; then ok "zjl-bgi-zzb 挂载可见"; else warn "未见 /mnt/zjl-bgi-zzb（copy/symlink 灌库需要）"; fi
       if discover_conda || [[ "${PREFER_DEPS_CONDA}" == "1" ]]; then
         :
       else

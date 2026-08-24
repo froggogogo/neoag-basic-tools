@@ -41,7 +41,7 @@ export RUN_PRODUCTION="${RUN_PRODUCTION:-0}"              # 默认不跑 product
 
 # --- 共享资源根（通常不用改）-------------------------------------------------
 export NEOAG_BASIC_DEPS_DIR="${NEOAG_BASIC_DEPS_DIR:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps}"
-export NEODATA_ROOT="${NEODATA_ROOT:-/mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git}"
+export NEODATA_ROOT="${NEODATA_ROOT:-${NEOAG_BASIC_DEPS_DIR}}"
 export SHARED_SCRIPTS="${SHARED_SCRIPTS:-/mnt/zzbnew/peixunban/gl/mjx/neoag/shared_scripts}"
 
 # --- 临时目录（必须在 NAS case 下，禁止 /tmp）--------------------------------

@@ -29,8 +29,18 @@ for n in neoag-snaf neoag-splice neoag-splicemutr neoag-salmon-cpp neoag-fusion 
          neoag-optitype neoag-pvactools711 neoag-samtools19; do
   [[ -d "${CONDA_BASE}/envs/${n}" ]] && default_names+=("$n")
 done
-# SpecHLA uses a prefix env next to the tool tree (not under envs/ by default)
-SPECHLA_GOLD="${SPECHLA_GOLD:-/home/na/project/neoantigen/neoag_event_pipeline_v03_rc/tools/SpecHLA/spechla_env}"
+# SpecHLA prefix env (pack only if it exists on THIS host)
+SPECHLA_GOLD="${SPECHLA_GOLD:-}"
+if [[ -z "${SPECHLA_GOLD}" ]]; then
+  _ips=" $(hostname -I 2>/dev/null || true) "
+  if [[ "${_ips}" == *" 10.200.50.134 "* ]]; then
+    SPECHLA_GOLD=/home/na/project/neoantigen/neoag_event_pipeline_v03_rc/tools/SpecHLA/spechla_env
+  elif [[ "${_ips}" == *" 10.200.65.66 "* ]]; then
+    SPECHLA_GOLD=/root/neo/envs/miniforge3/envs/spechla_env
+  elif [[ "${_ips}" == *" 10.200.65.169 "* ]]; then
+    SPECHLA_GOLD=/root/neo/env_tool/tools/SpecHLA/spechla_env
+  fi
+fi
 
 IFS=',' read -r -a want <<<"${NAMES}"
 if [[ -z "$NAMES" ]]; then

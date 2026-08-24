@@ -41,12 +41,19 @@ _neoag_try_root() {
 
 if [[ -z "${NEOAG_ROOT:-}" || ! -f "${NEOAG_ROOT}/conf/tools.env.sh" ]]; then
   _picked=0
-  # Host-local neo checkouts only (134 may still use /home/na/...; never as primary).
+  _host_neo=()
+  _ips=" $(hostname -I 2>/dev/null || true) "
+  if [[ "${_ips}" == *" 10.200.65.66 "* || "${_ips}" == *" 10.200.65.169 "* ]]; then
+    _host_neo+=("/root/neo/src/na0707_upload_release")
+  elif [[ "${_ips}" == *" 10.200.50.134 "* ]]; then
+    _host_neo+=(
+      "/home/na/project/neoantigen/neoag_event_pipeline_na0707_sync_20260811"
+      "/home/na/project/neoantigen/neoag_event_pipeline_v03_rc"
+    )
+  fi
   for _c in \
     "${NEOAG_ROOT:-}" \
-    "/root/neo/src/na0707_upload_release" \
-    "/home/na/project/neoantigen/neoag_event_pipeline_na0707_sync_20260811" \
-    "/home/na/project/neoantigen/neoag_event_pipeline_v03_rc" \
+    "${_host_neo[@]}" \
     "${_NEOAG_PORTABLE_DEPS}/src/neo"
   do
     if _neoag_try_root "${_c}"; then
@@ -59,7 +66,7 @@ if [[ -z "${NEOAG_ROOT:-}" || ! -f "${NEOAG_ROOT}/conf/tools.env.sh" ]]; then
     echo "  Set NEOAG_ROOT to a neo checkout (66: /root/neo/src/na0707_upload_release)." >&2
     return 1 2>/dev/null || exit 1
   fi
-  unset _picked _c
+  unset _picked _c _host_neo _ips
 fi
 
 unset TF_USE_LEGACY_KERAS KERAS_BACKEND || true

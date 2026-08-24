@@ -60,8 +60,6 @@ if [[ -z "${LOHHLA_HOME:-}" || ! -f "${LOHHLA_HOME}/LOHHLAscript.R" ]]; then
     "${LOHHLA_HOME:-}" \
     "${DEPS}/tools/lohhla" \
     "${DEPS}/tools/neodata_tools/LOHHLA" \
-    "/mnt/zzbnew/peixunban/gl/liup/neodata4git/data/tools/lohhla" \
-    "/mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git/data/tools/lohhla" \
   )" || true
 fi
 export LOHHLA_HOME="${LOHHLA_HOME:?ERROR: LOHHLA_HOME not found (need LOHHLAscript.R under deps/tools/lohhla)}"
@@ -90,8 +88,6 @@ if [[ ! -f "${LOHHLA_GATK_DIR}/picard.jar" ]]; then
   PICARD_CAND=""
   for cand in \
     ${CONDA_BASE:+"${CONDA_BASE}/envs/neoag-gatk/share/picard-"*/picard.jar} \
-    "/home/na/miniforge3/envs/neoag-gatk/share/picard-"*/picard.jar \
-    "/root/neo/envs/miniforge3/envs/neoag-gatk/share/picard-"*/picard.jar \
     "${DEPS}/tools/picard/picard.jar" \
     "${DEPS}/tools/neodata_tools/conda_pkgs/picard-"*/picard.jar \
     "${DEPS}/tools/neodata_tools/HLA-LA/.conda/share/picard-"*/picard.jar

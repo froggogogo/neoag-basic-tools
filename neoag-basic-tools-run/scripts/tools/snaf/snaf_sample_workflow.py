@@ -104,9 +104,6 @@ def normalize_snaf_coord_tables(outdir: Path) -> None:
 
 
 def main() -> int:
-    # Ensure netMHCpan helper wrappers can find conda sysroot.
-    os.environ.setdefault("NEOAG_CONDA_BASE", "/home/na/miniforge3")
-
     outdir = Path(required_env("NEOAG_SNAF_OUTDIR"))
     matrix_path = Path(required_env("NEOAG_SNAF_MATRIX"))
     db_dir = Path(required_env("NEOAG_SNAF_DB"))

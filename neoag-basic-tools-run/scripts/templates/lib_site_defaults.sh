@@ -23,16 +23,10 @@ unset TF_USE_LEGACY_KERAS KERAS_BACKEND || true
 #   ensure_hlala_graph_readable   # only if HLA-LA will run
 # =============================================================================
 
-# Candidate reference genomes (prefer chr*-named assemblies for BAM with chr contigs).
-# NOTE: some paths named Homo_sapiens_assembly38.fasta are misleading symlinks to
-# Ensembl primary assembly (contigs 1,2,10… without "chr") — those break sequenza/hmf.
+# Candidate reference genomes: neoag-100T only (never zjl).
 _DEFAULT_REF_CANDIDATES=(
   "${NEOAG_BASIC_DEPS_DIR:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps}/refs/sequenza/reference/GRCh38.primary_assembly.chr.fa"
   "${NEOAG_BASIC_DEPS_DIR:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps}/refs/hg38/Homo_sapiens_assembly38.fasta"
-  "/mnt/zjl-bgi-zzb/peixunban/gl/data/reference/Homo_sapiens_assembly38.fasta"
-  "/mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git/data/ref/hg38/Homo_sapiens_assembly38.fasta"
-  "/mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata/data/ref/hg38/Homo_sapiens_assembly38.fasta"
-  "/mnt/zjl-bgi-zzb/peixunban/gl/data/reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa"
 )
 
 _DEFAULT_HLALA_GRAPH="${HLA_LA_GRAPH:-${NEOAG_BASIC_DEPS_DIR:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps}/refs/hla/PRG_MHC_GRCh38_withIMGT}"

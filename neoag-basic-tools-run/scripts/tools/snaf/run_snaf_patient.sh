@@ -20,8 +20,7 @@ SNAF_DB="${NEOAG_SNAF_DB:-}"
 if [[ -z "$SNAF_DB" ]]; then
   for cand in \
     "${DEPS_DIR}/refs/snaf/reference/data" \
-    "${DEPS_DIR}/refs/snaf" \
-    "/mnt/zjl-bgi-zzb/peixunban/gl/liup/neodata4git/data/snaf/reference/data"
+    "${DEPS_DIR}/refs/snaf"
   do
     if [[ -s "${cand}/controls/GTEx_junction_counts.h5ad" ]]; then
       SNAF_DB="$cand"

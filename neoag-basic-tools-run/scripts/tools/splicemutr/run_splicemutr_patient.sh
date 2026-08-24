@@ -36,12 +36,30 @@ WORK="${WORK:-}"
 SNAF_RESULT="${SNAF_RESULT:-}"
 HLAS="${HLAS:-}"
 
-# Machine-shared defaults (not sample-specific).
-GTF="${GTF:-/root/neo/neodata4git/data/ref/hg38/gencode.gtf}"
-SPLICEMUTR_HOME="${SPLICEMUTR_HOME:-/root/neo/env_tool/tools/SpliceMutr}"
-CONDA="${CONDA:-/root/neo/env_tool/miniforge3/bin/conda}"
-ENV="${ENV:-/root/neo/env_tool/miniforge3/envs/neoag-splicemutr}"
-NETMHCPAN="${NETMHCPAN:-/root/neo/licensed_tools/netMHCpan/netMHCpan}"
+# Shared refs/tools: neoag-100T. Conda/env: this host only (no 169 env_tool defaults on 66/134).
+_DEPS="${NEOAG_BASIC_DEPS_DIR:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps}"
+_CONDA_BASE="${NEOAG_CONDA_BASE:-}"
+if [[ -z "${_CONDA_BASE}" ]]; then
+  _ips=" $(hostname -I 2>/dev/null || true) "
+  if [[ "${_ips}" == *" 10.200.65.66 "* ]]; then
+    _CONDA_BASE=/root/neo/envs/miniforge3
+  elif [[ "${_ips}" == *" 10.200.50.134 "* ]]; then
+    _CONDA_BASE=/home/na/miniforge3
+  elif [[ "${_ips}" == *" 10.200.65.169 "* ]]; then
+    _CONDA_BASE=/root/neo/env_tool/miniforge3
+  fi
+fi
+GTF="${GTF:-${RNA_GTF:-${_DEPS}/refs/ctat/current/ctat_genome_lib_build_dir/ref_annot.gtf}}"
+SPLICEMUTR_HOME="${SPLICEMUTR_HOME:-${_DEPS}/tools/SpliceMutr}"
+if [[ ! -d "${SPLICEMUTR_HOME}/Rscripts" ]]; then
+  case "$(hostname -I 2>/dev/null || true)" in
+    *10.200.65.66*) SPLICEMUTR_HOME="${SPLICEMUTR_HOME:-/root/neo/envs/tools/SpliceMutr}" ;;
+    *10.200.65.169*) SPLICEMUTR_HOME="${SPLICEMUTR_HOME:-/root/neo/env_tool/tools/SpliceMutr}" ;;
+  esac
+fi
+CONDA="${CONDA:-${_CONDA_BASE}/bin/conda}"
+ENV="${ENV:-${_CONDA_BASE}/envs/neoag-splicemutr}"
+NETMHCPAN="${NETMHCPAN:-${_DEPS}/licenses/predictors/netMHCpan/netMHCpan}"
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HELPER="${HELPER:-${_SCRIPT_DIR}/prepare_splicemutr_candidates.py}"
 BSGENOME="${BSGENOME:-BSgenome.Hsapiens.UCSC.hg38}"

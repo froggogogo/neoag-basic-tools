@@ -12,6 +12,60 @@
 
 : "${NEOAG_BASIC_DEPS_DIR:=/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps}"
 
+# This-host only. Never /mnt/zjl-bgi-zzb. Never probe another machine's prefix.
+neoag_this_host_id() {
+  local ips hn
+  ips=" $(hostname -I 2>/dev/null || true) "
+  hn="$(hostname -s 2>/dev/null || hostname 2>/dev/null || true)"
+  if [[ "${ips}" == *" 10.200.65.66 "* || "${hn}" == *65.66* ]]; then
+    printf '%s\n' 66
+    return 0
+  fi
+  if [[ "${ips}" == *" 10.200.50.134 "* ]]; then
+    printf '%s\n' 134
+    return 0
+  fi
+  if [[ "${ips}" == *" 10.200.65.169 "* ]]; then
+    printf '%s\n' 169
+    return 0
+  fi
+  printf '%s\n' unknown
+}
+
+neoag_local_conda_prefix() {
+  case "$(neoag_this_host_id)" in
+    66) printf '%s\n' /root/neo/envs/miniforge3 ;;
+    134) printf '%s\n' /home/na/miniforge3 ;;
+    169) printf '%s\n' /root/neo/env_tool/miniforge3 ;;
+  esac
+}
+
+neoag_local_neo_roots() {
+  case "$(neoag_this_host_id)" in
+    66|169)
+      printf '%s\n' /root/neo/src/na0707_upload_release
+      ;;
+    134)
+      printf '%s\n' /home/na/project/neoantigen/neoag_event_pipeline_na0707_sync_20260811
+      printf '%s\n' /home/na/project/neoantigen/neoag_event_pipeline_v03_rc
+      ;;
+  esac
+}
+
+neoag_local_tools_roots() {
+  case "$(neoag_this_host_id)" in
+    66)
+      printf '%s\n' /root/neo/envs/tools /root/neo/envs
+      ;;
+    134)
+      printf '%s\n' /home/na/project/neoantigen/neoag_event_pipeline_v03_rc/tools
+      ;;
+    169)
+      printf '%s\n' /root/neo/env_tool/tools /root/neo/env_tool
+      ;;
+  esac
+}
+
 _neoag_first_chr_contig() {
   local fa="$1"
   local fai="${fa}.fai"
@@ -33,17 +87,14 @@ neoag_resolve_conda_base() {
   local c
   for c in \
     "${NEOAG_CONDA_BASE:-}" \
-    "${NEOAG_BASIC_DEPS_DIR}/software/miniforge3" \
-    "/home/na/miniforge3" \
-    "/root/neo/envs/miniforge3" \
-    "/root/neo/env_tool/miniforge3"
+    "$(neoag_local_conda_prefix)"
   do
     [[ -n "$c" && -x "${c}/bin/conda" ]] || continue
     export NEOAG_CONDA_BASE="$c"
     export CONDA_EXE="${c}/bin/conda"
     return 0
   done
-  echo "[site.env] ERROR: 未找到 conda（试过 deps miniforge / 134 /home/na / 66 envs / 169 env_tool）" >&2
+  echo "[site.env] ERROR: 本机未找到 conda（host=$(neoag_this_host_id)）。不要用别机前缀或 zjl 盘。" >&2
   return 1
 }
 
@@ -51,13 +102,13 @@ neoag_resolve_neo_root() {
   local c
   local pick=""
   local full=""
-  for c in \
-    "${NEOAG_ROOT:-}" \
-    "/home/na/project/neoantigen/neoag_event_pipeline_na0707_sync_20260811" \
-    "/home/na/project/neoantigen/neoag_event_pipeline_v03_rc" \
-    "/root/neo/src/na0707_upload_release" \
-    "${NEOAG_BASIC_DEPS_DIR}/src/neo"
-  do
+  local roots=()
+  [[ -n "${NEOAG_ROOT:-}" ]] && roots+=("${NEOAG_ROOT}")
+  while IFS= read -r c; do
+    [[ -n "$c" ]] && roots+=("$c")
+  done < <(neoag_local_neo_roots)
+  roots+=("${NEOAG_BASIC_DEPS_DIR}/src/neo")
+  for c in "${roots[@]}"; do
     [[ -n "$c" && -d "$c" ]] || continue
     [[ -z "$pick" ]] && pick="$c"
     if [[ -d "${c}/src/neoag" || -f "${c}/pyproject.toml" ]] && [[ -f "${c}/conf/tools.env.sh" || -d "${c}/src/neoag" ]]; then
@@ -73,14 +124,13 @@ neoag_resolve_neo_root() {
 
 neoag_resolve_tools_root() {
   local c inner
-  for c in \
-    "${NEOAG_TOOLS_ROOT:-}" \
-    "${NEOAG_BASIC_DEPS_DIR}/tools" \
-    "/root/neo/envs/tools" \
-    "/root/neo/env_tool/tools" \
-    "/root/neo/envs" \
-    "/root/neo/env_tool"
-  do
+  local roots=()
+  [[ -n "${NEOAG_TOOLS_ROOT:-}" ]] && roots+=("${NEOAG_TOOLS_ROOT}")
+  roots+=("${NEOAG_BASIC_DEPS_DIR}/tools")
+  while IFS= read -r c; do
+    [[ -n "$c" ]] && roots+=("$c")
+  done < <(neoag_local_tools_roots)
+  for c in "${roots[@]}"; do
     [[ -n "$c" && -d "$c" ]] || continue
     inner="$c"
     if [[ ! -d "${c}/STAR-Fusion" && -d "${c}/tools/STAR-Fusion" ]]; then
@@ -347,9 +397,6 @@ neoag_resolve_spechla() {
     "${SPECHLA_ENV:-}" \
     "${NEOAG_CONDA_BASE:-}/envs/spechla_env" \
     "${NEOAG_TOOLS_ROOT:-}/SpecHLA/spechla_env" \
-    /home/na/project/neoantigen/neoag_event_pipeline_v03_rc/tools/SpecHLA/spechla_env \
-    /root/neo/envs/tools/SpecHLA/spechla_env \
-    /root/neo/env_tool/tools/SpecHLA/spechla_env \
     "${home}/spechla_env"
   do
     [[ -n "${cand}" && -d "${cand}/bin" ]] || continue
@@ -493,6 +540,12 @@ neoag_site_activate() {
   export SALMON_INDEX="${SALMON_INDEX:-${deps}/refs/rna/gencode_v49/salmon_index}"
   export SALMON_TX2GENE="${SALMON_TX2GENE:-${deps}/refs/rna/gencode_v49/tx2gene.tsv}"
   export RSEM_TRANSCRIPTS_FA="${RSEM_TRANSCRIPTS_FA:-${deps}/refs/rna/gencode.v49.transcripts.fa.gz}"
+  export NEOAG_SNAF_DB="${NEOAG_SNAF_DB:-${deps}/refs/snaf/reference/data}"
+  export SNAF_DB="${SNAF_DB:-${NEOAG_SNAF_DB}}"
+  if [[ -d "${deps}/tools/SpliceMutr" ]]; then
+    export SPLICEMUTR_HOME="${SPLICEMUTR_HOME:-${deps}/tools/SpliceMutr}"
+  fi
+  export GTF="${GTF:-${RNA_GTF:-${CTAT_GENOME_LIB:-}/ref_annot.gtf}}"
 
   export NETMHCPAN_HOME="${deps}/licenses/predictors/netMHCpan"
   export NEOAG_NETMHCPAN_BIN="${NETMHCPAN_HOME}/netMHCpan"
@@ -504,8 +557,6 @@ neoag_site_activate() {
     export MHCFLURRY_DATA_DIR="$(head -1 "${deps}/configs/mhcflurry_data_dir.txt" | tr -d '[:space:]')"
   elif [[ -d "${HOME}/.local/share/mhcflurry" ]]; then
     export MHCFLURRY_DATA_DIR="${HOME}/.local/share/mhcflurry"
-  elif [[ -d /home/na/.local/share/mhcflurry ]]; then
-    export MHCFLURRY_DATA_DIR="/home/na/.local/share/mhcflurry"
   fi
 
   neoag_resolve_conda_base || true

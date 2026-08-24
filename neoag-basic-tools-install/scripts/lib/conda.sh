@@ -17,12 +17,17 @@ discover_conda() {
     :
   fi
 
-  # Host gold prefixes first (OSS/FUSE neoag_100T is a bad conda prefix).
+  # This-host conda only (never probe other machines' prefixes).
+  _ips=" $(hostname -I 2>/dev/null || true) "
+  if [[ "${_ips}" == *" 10.200.65.66 "* ]]; then
+    cands+=("/root/neo/envs/miniforge3/bin/conda")
+  elif [[ "${_ips}" == *" 10.200.50.134 "* ]]; then
+    cands+=("/home/na/miniforge3/bin/conda")
+  elif [[ "${_ips}" == *" 10.200.65.169 "* ]]; then
+    cands+=("/root/neo/env_tool/miniforge3/bin/conda")
+  fi
   cands+=(
     "${CONDA_DIR:-}/bin/conda"
-    "/home/na/miniforge3/bin/conda"
-    "/root/neo/envs/miniforge3/bin/conda"
-    "/root/neo/env_tool/miniforge3/bin/conda"
     "${HOME}/.local/neoag-miniforge3/bin/conda"
     "${HOME}/miniforge3/bin/conda"
     "${HOME}/mambaforge/bin/conda"

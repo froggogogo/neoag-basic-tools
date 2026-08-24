@@ -148,8 +148,6 @@ ensure_mhcflurry_layout() {
     printf '%s\n' "$deps_mf" >"$hint"
   elif [[ -d "${home_mf}/2.0.0/models_class1_presentation" || -L "${home_mf}/2.0.0" ]]; then
     printf '%s\n' "$home_mf" >"$hint"
-  elif [[ -d /home/na/.local/share/mhcflurry/2.0.0/models_class1_presentation || -L /home/na/.local/share/mhcflurry/2.0.0 ]]; then
-    printf '%s\n' "/home/na/.local/share/mhcflurry" >"$hint"
   fi
   [[ -f "$hint" ]] && chmod a+rw "$hint" 2>/dev/null || true
 

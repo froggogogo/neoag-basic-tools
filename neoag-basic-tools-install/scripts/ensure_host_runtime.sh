@@ -204,13 +204,18 @@ ensure_spechla_env() {
     export SPECHLA_ENV="${dest}"
     return 0
   fi
-  # Prefer existing gold prefix on this host (134)
+  # Prefer existing gold prefix on THIS host only
   local gold
-  for gold in \
-    /home/na/project/neoantigen/neoag_event_pipeline_v03_rc/tools/SpecHLA/spechla_env \
-    /root/neo/envs/tools/SpecHLA/spechla_env \
-    /root/neo/env_tool/tools/SpecHLA/spechla_env
-  do
+  local golds=()
+  _ips=" $(hostname -I 2>/dev/null || true) "
+  if [[ "${_ips}" == *" 10.200.50.134 "* ]]; then
+    golds+=(/home/na/project/neoantigen/neoag_event_pipeline_v03_rc/tools/SpecHLA/spechla_env)
+  elif [[ "${_ips}" == *" 10.200.65.66 "* ]]; then
+    golds+=(/root/neo/envs/tools/SpecHLA/spechla_env)
+  elif [[ "${_ips}" == *" 10.200.65.169 "* ]]; then
+    golds+=(/root/neo/env_tool/tools/SpecHLA/spechla_env)
+  fi
+  for gold in "${golds[@]}"; do
     if [[ -d "${gold}/bin" ]]; then
       ok "using gold spechla_env -> ${gold}"
       export SPECHLA_ENV="${gold}"
@@ -335,14 +340,19 @@ main() {
   fi
   ensure_mhcflurry_shim || true
 
-  copy_tool_tree_if_missing EasyFuse \
-    /root/neo/envs/tools/EasyFuse \
-    /root/neo/env_tool/tools/EasyFuse \
-    /home/na/project/neoantigen/neoag_event_pipeline_v03_rc/tools/EasyFuse || true
-  copy_tool_tree_if_missing STAR-Fusion \
-    /root/neo/envs/tools/STAR-Fusion \
-    /root/neo/env_tool/tools/STAR-Fusion \
-    /home/na/project/neoantigen/neoag_event_pipeline_v03_rc_artifact_quarantine_20260622_091158/tools/STAR-Fusion || true
+  _ips=" $(hostname -I 2>/dev/null || true) "
+  if [[ "${_ips}" == *" 10.200.65.66 "* ]]; then
+    copy_tool_tree_if_missing EasyFuse /root/neo/envs/tools/EasyFuse || true
+    copy_tool_tree_if_missing STAR-Fusion /root/neo/envs/tools/STAR-Fusion || true
+  elif [[ "${_ips}" == *" 10.200.65.169 "* ]]; then
+    copy_tool_tree_if_missing EasyFuse /root/neo/env_tool/tools/EasyFuse || true
+    copy_tool_tree_if_missing STAR-Fusion /root/neo/env_tool/tools/STAR-Fusion || true
+  elif [[ "${_ips}" == *" 10.200.50.134 "* ]]; then
+    copy_tool_tree_if_missing EasyFuse \
+      /home/na/project/neoantigen/neoag_event_pipeline_v03_rc/tools/EasyFuse || true
+    copy_tool_tree_if_missing STAR-Fusion \
+      /home/na/project/neoantigen/neoag_event_pipeline_v03_rc_artifact_quarantine_20260622_091158/tools/STAR-Fusion || true
+  fi
 
   local host_report="${DEPS_DIR}/manifests/host_verify_$(hostname -s 2>/dev/null || hostname).tsv"
   if [[ -x "${SCRIPT_DIR}/host_verify.sh" ]]; then

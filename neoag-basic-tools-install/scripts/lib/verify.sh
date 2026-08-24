@@ -296,8 +296,7 @@ verify_installation() {
     local mf
     for mf in \
       "${DEPS_DIR}/packages/mhcflurry_data" \
-      "${HOME:-}/.local/share/mhcflurry" \
-      "/home/na/.local/share/mhcflurry"
+      "${HOME:-}/.local/share/mhcflurry"
     do
       [[ -n "$mf" && -d "$mf" ]] || continue
       if [[ -e "${mf}/2.0.0/models_class1_presentation" || -e "${mf}/4/2.0.0/models_class1_presentation" ]]; then
