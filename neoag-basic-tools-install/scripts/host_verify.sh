@@ -55,6 +55,8 @@ item "bin:sequenza-utils" "${E}/neoag-sequenza/bin/sequenza-utils"
 item "env:neoag-vep" "${E}/neoag-vep"
 item "bin:vep" "${VEP_BIN:-${E}/neoag-vep/bin/vep}"
 item "env:neoag-gatk" "${E}/neoag-gatk"
+item "env:neoag-ascat" "${E}/neoag-ascat"
+item "env:neoag-facets" "${E}/neoag-facets"
 item "env:neoag-optitype" "${E}/neoag-optitype"
 item "env:neoag-snaf" "${E}/neoag-snaf"
 item "pvac:711_or_tools" "${NEOAG_PVAC_ENV:-${E}/neoag-pvactools711}"
@@ -87,6 +89,21 @@ if [[ -x "${E}/neoag-sequenza/bin/Rscript" ]]; then
     ok "r:data.table" "neoag-sequenza"
   else
     miss "r:data.table" "neoag-sequenza"
+  fi
+fi
+if [[ -x "${E}/neoag-ascat/bin/Rscript" ]]; then
+  if "${E}/neoag-ascat/bin/Rscript" -e 'suppressPackageStartupMessages(library(ASCAT)); cat("OK\n")' >/dev/null 2>&1; then
+    ok "r:ASCAT" "neoag-ascat"
+  else
+    miss "r:ASCAT" "neoag-ascat"
+  fi
+fi
+if [[ -d "${E}/neoag-gatk/share" ]]; then
+  picard="$(find "${E}/neoag-gatk/share" -maxdepth 2 -name 'picard.jar' 2>/dev/null | head -1 || true)"
+  if [[ -n "$picard" && -f "$picard" ]]; then
+    ok "jar:picard" "$picard"
+  else
+    miss "jar:picard" "${E}/neoag-gatk/share"
   fi
 fi
 

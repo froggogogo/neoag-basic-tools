@@ -148,22 +148,23 @@ HMFTOOLS：在 deps `tools/neodata_tools/HMFTOOLS/.conda`（非 NEOAG_ROOT 内�
 
 ## 6. 三机对比（2026-08-23）
 
-| 项目 | 134 ✅ | 66 ⚠️ | 169 ❌ |
+| 项目 | 134 ✅ | 66 ✅ | 169 ❌ |
 |---|---|---|---|
 | NEOAG_ROOT (na0707) | `/home/na/.../na0707_sync_20260811` | `/root/neo/src/na0707_upload_release`（切片） | 同 66 |
 | CONDA_BASE | `/home/na/miniforge3` (29 envs) | `/root/neo/envs/miniforge3` (17 envs) | **无** |
-| neoag-ascat | ASCAT_OK | **R 包损坏** | MISSING |
-| neoag-gatk picard | ✅ 3.5.0 | **MISSING** | MISSING |
+| neoag-ascat | ASCAT_OK | **ASCAT_OK**（2026-08-23 conda-pack + host python unpack） | MISSING |
+| neoag-gatk picard | ✅ 3.5.0 | ✅ 3.5.0 | MISSING |
 | HMFTOOLS (deps) | ✅ | ✅ | ✅ |
 | shared_scripts sequenza | `283de1b` 金路径 | 同左 | 同左 |
-| 病例 scripts 同步 | sunbinbin=shared | jinganxin **Sequenza 旧版** | 未审计 |
+| 病例 scripts 同步 | sunbinbin=shared | jinganxin **已同步金路径** | 未审计 |
+| host_verify | 全 OK | **全 OK**（2026-08-23） | 未安装 |
 
-### 66 待修复
+### 66 已修复（2026-08-23）
 
-1. `neoag-ascat`：重装或从 134 rsync env
-2. `neoag-gatk`：补 `picard.jar` 或改 `run_lohhla.sh` 搜 deps 内 picard
-3. `run_purple_steps.sh`：amber 改走 deps HMFTOOLS（非 NEOAG_ROOT）
-4. 病例 `run_sequenza_steps.sh` 同步金路径 `shared_scripts/sequenza/`
+1. `neoag-ascat`：从 `deps/packages/conda_packs/neoag-ascat.tar.gz` 解包，用 `${CONDA_BASE}/bin/python conda-unpack` 重写路径（勿直接 tar/rsync 134 env）
+2. `neoag-gatk`：picard-3.5.0 已就位
+3. `run_purple_steps.sh` / `run_lohhla.sh`：模板已改走 deps HMFTOOLS / 扩展 picard 搜索
+4. `run_sequenza_steps.sh`：三处 md5 `283de1b` 一致
 
 ### 169 待修复
 

@@ -98,9 +98,32 @@ unpack_conda_pack() {
     *) tar -xf "$pack" -C "$dest" ;;
   esac
   if [[ -x "${dest}/bin/conda-unpack" ]]; then
-    "${dest}/bin/conda-unpack" || true
+    # R-only envs (e.g. neoag-ascat) ship without python; use host miniforge python.
+    if ! "${dest}/bin/conda-unpack" 2>/dev/null; then
+      if [[ -x "${CONDA_BASE}/bin/python" ]]; then
+        "${CONDA_BASE}/bin/python" "${dest}/bin/conda-unpack" || true
+      fi
+    fi
   fi
   ok "unpacked ${name} -> ${dest}"
+}
+
+ensure_ascat() {
+  local envdir="${CONDA_BASE}/envs/neoag-ascat"
+  if [[ -x "${envdir}/bin/Rscript" ]] && \
+     "${envdir}/bin/Rscript" -e 'library(ASCAT); cat("OK\n")' >/dev/null 2>&1; then
+    ok "neoag-ascat ASCAT library OK"
+    return 0
+  fi
+  warn "neoag-ascat missing or broken (134 paths?) — unpack from conda-pack"
+  rm -rf "$envdir"
+  if unpack_conda_pack neoag-ascat && \
+     "${envdir}/bin/Rscript" -e 'library(ASCAT); cat("OK\n")' >/dev/null 2>&1; then
+    ok "neoag-ascat restored"
+    return 0
+  fi
+  warn "neoag-ascat still broken after unpack"
+  return 1
 }
 
 ensure_samtools19() {
@@ -292,9 +315,10 @@ main() {
   ensure_star_in_fusion || true
   ensure_salmon_cpp || true
   ensure_spechla_env || true
+  ensure_ascat || true
 
   local name
-  for name in neoag-tools neoag-fusion neoag-splice neoag-splicemutr neoag-sequenza neoag-vep neoag-gatk neoag-snaf neoag-optitype neoag-pvactools711; do
+  for name in neoag-tools neoag-fusion neoag-splice neoag-splicemutr neoag-sequenza neoag-vep neoag-gatk neoag-ascat neoag-snaf neoag-optitype neoag-pvactools711; do
     ensure_env_named "$name" || true
   done
 

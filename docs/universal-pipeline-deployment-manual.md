@@ -33,16 +33,21 @@ bash host_verify.sh
 134 使用 `/home/na/miniforge3` 下 29 个 `neoag-*` env。  
 66 / 169 须与 134 **同名同版本**；当前缺口见 `docs/gold-standard-inventory-134.md` §6。
 
-**66 优先修复：**
+**66（2026-08-23/24 已同步）：** `host_verify` 全 OK；`neoag-ascat` / `neoag-gatk`/picard / HMFTOOLS 可用。  
+勿用 rsync 直接拷贝 134 conda env（会留下 `/home/na/miniforge3/...` 硬编码）。正确做法：
 
 ```bash
-# 从 134 同步损坏 env（示例）
-rsync -a na@134:/home/na/miniforge3/envs/neoag-ascat/ \
-  /root/neo/envs/miniforge3/envs/neoag-ascat/
-# picard：确保 neoag-gatk 含 share/picard-*/picard.jar
+# 在目标机上：从 conda-pack 解包并用本机 python 跑 conda-unpack
+PACK=$DEPS/packages/conda_packs/neoag-ascat.tar.gz
+DEST=$CONDA_BASE/envs/neoag-ascat
+rm -rf "$DEST" && mkdir -p "$DEST"
+tar -xzf "$PACK" -C "$DEST"
+$CONDA_BASE/bin/python "$DEST/bin/conda-unpack"
+"$DEST/bin/Rscript" -e 'library(ASCAT); cat("ASCAT_OK\n")'
+# 或：bash scripts/ensure_host_runtime.sh  （已含 ensure_ascat）
 ```
 
-**169：** 需完整执行 `install.sh --one-shot`（当前无 conda env）。
+**169：** 暂缓；需完整执行 `install.sh --one-shot`（当前无 conda env）。
 
 ### 2.4 同步 shared_scripts
 
@@ -145,7 +150,8 @@ RUN_PRODUCTION=1 STAGE=production bash run_case_all.sh  # 可选
 
 ### ASCAT Rscript execution error（66）
 
-- `neoag-ascat` env 损坏；从 134 rsync 整个 env
+- 根因：直接 tar/rsync 134 env 后，`bin/R` 仍指向 `/home/na/miniforge3/...`
+- 修复：用 `conda_packs/neoag-ascat.tar.gz` 解包 + `$CONDA_BASE/bin/python …/conda-unpack`（见 §2.3）
 
 ### TMPDIR 必须在 CASE_ROOT
 
