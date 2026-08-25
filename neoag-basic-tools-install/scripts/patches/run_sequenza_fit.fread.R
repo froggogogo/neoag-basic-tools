@@ -29,47 +29,23 @@ seqz_is_gzip <- function(path) {
 
 resolve_seqz_path <- function(path) {
   if (!file.exists(path)) stop("seqz file not found: ", path)
-  is_gzip <- seqz_is_gzip(path)
-  # sunbinbin β / seqz_binning: plain TSV named *.gz → hardlink twin without .gz
-  if (grepl("\\.gz$", path, ignore.case = TRUE) && !is_gzip) {
+  # sunbinbin gold: merge writes plain TSV named *.small.seqz.gz (+ hardlink twin).
+  # Real gzip is not supported — remake merge as fake .gz (do not gunzip here).
+  if (seqz_is_gzip(path)) {
+    stop(
+      "seqz is real gzip: ", path,
+      "\nRemake pileup merge as plain TSV named *.small.seqz.gz (sunbinbin fake-.gz).",
+      "\nDo not decompress in fit."
+    )
+  }
+  if (grepl("\\.gz$", path, ignore.case = TRUE)) {
     plain <- sub("\\.gz$", "", path, ignore.case = TRUE)
     if (!file.exists(plain)) {
       ok <- FALSE
       tryCatch({ file.link(path, plain); ok <- TRUE }, error = function(e) NULL)
       if (!ok) file.symlink(normalizePath(path), plain)
     }
-    cat(sprintf("[%s] seqz named .gz but is plain text; using %s\n", Sys.time(), plain))
-    return(plain)
-  }
-  # Real gzip (e.g. mistaken | gzip -c merge): materialize plain for awk split.
-  # Do NOT use system2(stdout=path, stderr=TRUE) — R rewrites stdout=TRUE and either
-  # leaves an empty file (66) or slurps the whole stream into RAM (134, tens of GB).
-  if (is_gzip) {
-    plain <- if (grepl("\\.gz$", path, ignore.case = TRUE)) {
-      sub("\\.gz$", "", path, ignore.case = TRUE)
-    } else {
-      paste0(path, ".ungz")
-    }
-    need <- !file.exists(plain) || isTRUE(file.info(plain)$size == 0) ||
-      file.info(plain)$mtime < file.info(path)$mtime
-    if (need) {
-      cat(sprintf("[%s] real gzip seqz; decompressing via shell -> %s\n", Sys.time(), plain))
-      tmp <- paste0(plain, ".tmp.", Sys.getpid())
-      unlink(tmp)
-      cmd <- sprintf("gzip -dc %s > %s", shQuote(path), shQuote(tmp))
-      rc <- system(cmd)
-      if (!identical(as.integer(rc), 0L)) {
-        unlink(tmp)
-        stop("gzip -dc failed for ", path, " rc=", rc)
-      }
-      if (!file.exists(tmp) || isTRUE(file.info(tmp)$size == 0)) {
-        unlink(tmp)
-        stop("decompress produced empty file: ", tmp)
-      }
-      file.rename(tmp, plain)
-    } else {
-      cat(sprintf("[%s] reuse decompressed seqz %s\n", Sys.time(), plain))
-    }
+    cat(sprintf("[%s] fake .gz (plain text); using %s\n", Sys.time(), plain))
     return(plain)
   }
   path

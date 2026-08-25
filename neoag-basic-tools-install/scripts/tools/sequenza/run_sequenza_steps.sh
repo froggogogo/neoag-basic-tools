@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # Portable Sequenza pileup + fit — aligned with sunbinbin gold standard
-# (sunbinbin/scripts/run_sequenza_steps.sh md5 80cb04e4, 2026-08-20).
+# (sunbinbin/scripts/run_sequenza_steps.sh md5 80cb04e4 path; merge output = fake .gz).
 #
 # pileup: per-chrom bam2seqz (NUL-safe) → per-chrom seqz_binning → merge binned
 #         with awk empty-line / duplicate-header filter → ${SAMPLE}.small.seqz.gz
-# fit:    chrom-split fread Rscript (resolves fake .gz by magic bytes)
+#         as PLAIN TSV named .gz (+ hardlink twin without .gz). Never | gzip -c.
+# fit:    chrom-split fread Rscript on fake-.gz plain text (no gunzip in fit).
 #
 # Do NOT concat raw chrom seqz then bin: missing newlines at chr boundaries
 # produce >14 fields; adding printf '\n' without awk creates empty lines (NF=1)
 # and seqz_binning raises ValueError (expected 14, got 1).
 #
-# Fake .gz: sequenza-utils seqz_binning often writes plain TSV named *.gz.
-# Accept real gzip OR plain TSV (β policy); R fit already resolves via magic.
+# Fake .gz: sequenza-utils seqz_binning and this merge write plain TSV named *.gz
+# (sunbinbin successful artifact). Real gzip small.seqz.gz is rejected by fit.
 set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -303,12 +304,16 @@ do_pileup() {
 
 do_fit() {
   [[ -s "${BINNED}" ]] || { echo "ERROR: missing ${BINNED}; run SEQUENZA_STEP=pileup first" >&2; exit 1; }
+  if gzip -t "${BINNED}" 2>/dev/null; then
+    echo "ERROR: ${BINNED} is real gzip; remake merge as sunbinbin fake .gz (plain TSV named .gz)" >&2
+    exit 1
+  fi
   if [[ -f "${DONE_FIT}" && -s "${OUTDIR}/sequenza_fit/${SAMPLE_ID}.sequenza_summary.tsv" && "${FORCE}" != "1" ]]; then
     echo "[$(date -Is)] sequenza fit already done"
     return 0
   fi
   rm -f "${DONE_FIT}"
-  echo "[$(date -Is)] R fit"
+  echo "[$(date -Is)] R fit (fake .gz plain text)"
   run_env Rscript "${FIT_R}" "${BINNED}" "${OUTDIR}/sequenza_fit" "${SAMPLE_ID}"
   date -Is > "${DONE_FIT}"
   echo "[$(date -Is)] sequenza fit done"
