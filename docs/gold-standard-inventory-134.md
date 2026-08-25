@@ -49,7 +49,7 @@
 
 | 脚本 | 用途 |
 |---|---|
-| `run_sequenza_steps.sh` | **金路径**：bam2seqz → merge → bin → fit |
+| `run_sequenza_steps.sh` | **金路径**：per-chrom bam2seqz → per-chrom bin → merge binned (+ awk) → fit |
 | `run_sequenza_fit.R` | R fit（fread 分 chrom） |
 | `bam2seqz_nulsafe.py` | NUL-safe bam2seqz 包装 |
 
@@ -155,7 +155,7 @@ HMFTOOLS：在 deps `tools/neodata_tools/HMFTOOLS/.conda`（非 NEOAG_ROOT 内�
 | neoag-ascat | ASCAT_OK | **ASCAT_OK**（2026-08-23 conda-pack + host python unpack） | MISSING |
 | neoag-gatk picard | ✅ 3.5.0 | ✅ 3.5.0 | MISSING |
 | HMFTOOLS (deps) | ✅ | ✅ | ✅ |
-| shared_scripts sequenza | `283de1b` 金路径 | 同左 | 同左 |
+| shared_scripts sequenza | per-chrom bin + merge binned（假 .gz 兼容） | 同左 | 同左 |
 | 病例 scripts 同步 | sunbinbin=shared | jinganxin **已同步金路径** | 未审计 |
 | host_verify | 全 OK | **全 OK**（2026-08-23） | 未安装 |
 
@@ -164,7 +164,8 @@ HMFTOOLS：在 deps `tools/neodata_tools/HMFTOOLS/.conda`（非 NEOAG_ROOT 内�
 1. `neoag-ascat`：从 `deps/packages/conda_packs/neoag-ascat.tar.gz` 解包，用 `${CONDA_BASE}/bin/python conda-unpack` 重写路径（勿直接 tar/rsync 134 env）
 2. `neoag-gatk`：picard-3.5.0 已就位
 3. `run_purple_steps.sh` / `run_lohhla.sh`：模板已改走 deps HMFTOOLS / 扩展 picard 搜索
-4. `run_sequenza_steps.sh`：三处 md5 `283de1b` 一致
+4. `run_sequenza_steps.sh`：shared / skill / deps 均为 **per-chrom bin → merge binned**（对齐 sunbinbin `80cb04e4`，假 .gz 可接受）
+5. 病例编排从 `SHARED_SCRIPTS` 启动工具脚本，不依赖病例目录陈旧副本
 
 ### 169 待修复
 

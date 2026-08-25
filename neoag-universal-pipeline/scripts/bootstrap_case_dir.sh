@@ -9,9 +9,9 @@
 # 创建:
 #   $CASE_ROOT/scripts/          ← rsync from shared_scripts/case_templates
 #   $CASE_ROOT/short-rna/scripts/ ← rsync from short_rna_templates
-#   $CASE_ROOT/sequenza runner   ← link/copy shared_scripts/sequenza
-#   $CASE_ROOT/case.config.sh    ← 若不存在则从模板复制
-#   $CASE_ROOT/tmp logs evidence ...
+# Tool binaries/orchestrators should launch via SHARED_SCRIPTS
+#   (run_cnv_all → shared_tool sequenza/run_sequenza_steps.sh etc.)
+# Case-local copies of run_sequenza_steps.sh are fallbacks only.
 #
 # 依赖: SHARED_SCRIPTS, NEOAG_BASIC_DEPS_DIR (via load_config)
 # =============================================================================

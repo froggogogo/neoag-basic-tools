@@ -102,6 +102,56 @@ if [[ ! -f "${LOHHLA_GATK_DIR}/picard.jar" ]]; then
 fi
 
 [[ -s "${HLA_FILE}" ]] || { echo "ERROR: missing HLA_FILE ${HLA_FILE}" >&2; exit 1; }
+
+# sunbinbin gold: copyNumSolutions.txt is hand-built from FACETS purity + ASCAT ploidy
+# (see lohhla/copyNumSolutions.README.txt). Auto-build when missing so LOHHLA can resume.
+ensure_copynum_solutions() {
+  local out="${COPYNUM_LOC}"
+  if [[ -s "${out}" && "${FORCE:-0}" != "1" ]]; then
+    return 0
+  fi
+  local facets_purity ascat_summary tumor_base purity ploidy
+  facets_purity="${FACETS_PURITY_TSV:-${CASE_ROOT}/facets/omni2p5_snponly_downsample/purity.tsv}"
+  ascat_summary="${ASCAT_SUMMARY_TSV:-${CASE_ROOT}/ascat/ascat_summary.tsv}"
+  tumor_base="$(basename "${TUMOR_BAM}" .bam)"
+  purity=""
+  ploidy=""
+  if [[ -s "${facets_purity}" ]]; then
+    purity="$(awk -F'\t' 'NR==1{for(i=1;i<=NF;i++) if($i=="purity") c=i; next} c{print $c; exit}' "${facets_purity}")"
+  fi
+  if [[ -s "${ascat_summary}" ]]; then
+    ploidy="$(awk -F'\t' 'NR==1{for(i=1;i<=NF;i++) if($i=="ploidy") c=i; next} c{print $c; exit}' "${ascat_summary}")"
+    if [[ -z "${purity}" ]]; then
+      purity="$(awk -F'\t' 'NR==1{for(i=1;i<=NF;i++) if($i=="purity") c=i; next} c{print $c; exit}' "${ascat_summary}")"
+    fi
+  fi
+  # Sequenza fallback if both missing
+  local seq_sum="${CASE_ROOT}/sequenza/sequenza_fit/${PATIENT_ID}.sequenza_summary.tsv"
+  if [[ -z "${purity}" || -z "${ploidy}" ]] && [[ -s "${seq_sum}" ]]; then
+    [[ -n "${purity}" ]] || purity="$(awk -F'\t' 'NR==1{for(i=1;i<=NF;i++) if(tolower($i)~/(purity|cellularity)/) c=i; next} c{print $c; exit}' "${seq_sum}")"
+    [[ -n "${ploidy}" ]] || ploidy="$(awk -F'\t' 'NR==1{for(i=1;i<=NF;i++) if(tolower($i)=="ploidy") c=i; next} c{print $c; exit}' "${seq_sum}")"
+  fi
+  if [[ -z "${purity}" || -z "${ploidy}" ]]; then
+    echo "ERROR: cannot build ${out}; need FACETS purity + ASCAT ploidy (sunbinbin gold) or Sequenza summary" >&2
+    echo "  facets=${facets_purity} ascat=${ascat_summary} sequenza=${seq_sum}" >&2
+    return 1
+  fi
+  mkdir -p "$(dirname "${out}")"
+  {
+    printf '\ttumorPloidy\ttumorPurity\n'
+    printf '%s\t%s\t%s\n' "${tumor_base}" "${ploidy}" "${purity}"
+  } > "${out}"
+  cat > "${OUTDIR}/copyNumSolutions.README.txt" <<EOF
+tumorPurity = FACETS/ASCAT/Sequenza (auto)
+tumorPloidy = ASCAT/Sequenza (auto)
+row name must match basename(tumor BAM) without .bam
+aligned with sunbinbin gold: FACETS purity + ASCAT ploidy preferred
+generated=$(date -Is) purity=${purity} ploidy=${ploidy}
+EOF
+  echo "[lohhla] wrote COPYNUM_LOC=${out} tumor=${tumor_base} ploidy=${ploidy} purity=${purity}"
+}
+
+ensure_copynum_solutions || exit 1
 [[ -s "${COPYNUM_LOC}" ]] || { echo "ERROR: missing COPYNUM_LOC ${COPYNUM_LOC}" >&2; exit 1; }
 
 echo "==> LOHHLA launcher $(date -Is)"

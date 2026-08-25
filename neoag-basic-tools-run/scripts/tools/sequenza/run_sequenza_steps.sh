@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
-# Portable Sequenza pileup + fit (sunbinbin 2026-08-17 gold path).
-# pileup: per-chrom bam2seqz (NUL-safe) → merge raw chrom seqz → seqz_binning (may emit fake .gz)
+# Portable Sequenza pileup + fit — aligned with sunbinbin gold standard
+# (sunbinbin/scripts/run_sequenza_steps.sh md5 80cb04e4, 2026-08-20).
+#
+# pileup: per-chrom bam2seqz (NUL-safe) → per-chrom seqz_binning → merge binned
+#         with awk empty-line / duplicate-header filter → ${SAMPLE}.small.seqz.gz
 # fit:    chrom-split fread Rscript (resolves fake .gz by magic bytes)
-# Do NOT per-chrom bin then gzip -dc merge — binning output is often plain TSV named .gz.
+#
+# Do NOT concat raw chrom seqz then bin: missing newlines at chr boundaries
+# produce >14 fields; adding printf '\n' without awk creates empty lines (NF=1)
+# and seqz_binning raises ValueError (expected 14, got 1).
+#
+# Fake .gz: sequenza-utils seqz_binning often writes plain TSV named *.gz.
+# Accept real gzip OR plain TSV (β policy); R fit already resolves via magic.
 set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -59,7 +68,7 @@ if [[ -z "$BAM2SEQZ_WRAP" ]]; then
 fi
 
 resolve_samtools() {
-  local c ver
+  local c
   if [[ -n "${SAMTOOLS:-}" && -x "${SAMTOOLS}" ]]; then
     echo "${SAMTOOLS}"
     return 0
@@ -93,12 +102,11 @@ HET="${HET:-0.25}"
 SEQUENZA_STEP="${SEQUENZA_STEP:-all}"
 FORCE="${FORCE:-0}"
 LOG="${LOG:-${OUTDIR}/run.log}"
-MERGED="${OUTDIR}/${SAMPLE_ID}.merged.seqz.gz"
 BINNED="${OUTDIR}/${SAMPLE_ID}.small.seqz.gz"
 DONE_PILEUP="${OUTDIR}/.pileup.done"
 DONE_FIT="${OUTDIR}/.fit.done"
 
-mkdir -p "${OUTDIR}/chrom" "${OUTDIR}/sequenza_fit" "${OUTDIR}/tmp" "$(dirname "${LOG}")"
+mkdir -p "${OUTDIR}/chrom" "${OUTDIR}/chrom_binned" "${OUTDIR}/sequenza_fit" "${OUTDIR}/tmp" "$(dirname "${LOG}")"
 export TMPDIR="${TMPDIR:-${OUTDIR}/tmp}"
 export TMP="${TMP:-${TMPDIR}}"
 export TEMP="${TEMP:-${TMPDIR}}"
@@ -113,6 +121,7 @@ echo "    fit_r=${FIT_R}"
 echo "    outdir=${OUTDIR}"
 echo "    samtools=${SAMTOOLS} ($("${SAMTOOLS}" --version 2>/dev/null | head -1 || echo '?'))"
 echo "    wrap=${BAM2SEQZ_WRAP}"
+echo "    path=per-chrom-bin+merge-binned (sunbinbin gold; fake .gz accepted)"
 
 st_ver="$("${SAMTOOLS}" --version 2>/dev/null | awk 'NR==1{print $2}')"
 if [[ "${st_ver}" != 1.9* ]]; then
@@ -142,6 +151,30 @@ run_env() {
   local cmd="$1"
   shift
   "${SEQUENZA_BIN}/${cmd}" "$@"
+}
+
+# Accept real gzip OR plain TSV named .gz (seqz_binning often emits fake .gz).
+# aligned with sunbinbin gold path; accept fake .gz like R fit (β policy)
+is_usable_seqz() {
+  local f="$1"
+  [[ -s "$f" ]] || return 1
+  if gzip -t "$f" 2>/dev/null; then
+    return 0
+  fi
+  # plain TSV: header or first data row
+  local head1
+  head1="$(head -n 1 "$f" 2>/dev/null || true)"
+  [[ "${head1}" == chromosome$'\t'* || "${head1}" == chr* ]]
+}
+
+# Stream seqz whether real gzip or plain text.
+cat_seqz() {
+  local f="$1"
+  if gzip -t "$f" 2>/dev/null; then
+    gzip -dc "$f"
+  else
+    cat "$f"
+  fi
 }
 
 run_chrom() {
@@ -177,14 +210,36 @@ run_chrom() {
   mv "${tmp}" "${seqz}"
 }
 
+bin_one_chrom() {
+  local chrom="$1"
+  local safe
+  safe="$(echo "${chrom}" | tr ':/-' '___')"
+  local seqz="${OUTDIR}/chrom/${SAMPLE_ID}.${safe}.seqz.gz"
+  local small="${OUTDIR}/chrom_binned/${SAMPLE_ID}.${safe}.small.seqz.gz"
+  # reuse if real gzip OR usable fake .gz (β)
+  if [[ -s "${small}" && "${FORCE}" != "1" ]] && is_usable_seqz "${small}"; then
+    echo "[$(date -Is)] reuse binned ${chrom} -> ${small}"
+    return 0
+  fi
+  echo "[$(date -Is)] seqz_binning ${chrom}"
+  "${SEQUENZA_BIN}/sequenza-utils" seqz_binning \
+    -s "${seqz}" -w "${BIN_WINDOW}" -T "${TABIX}" -o "${small}.tmp"
+  if ! is_usable_seqz "${small}.tmp"; then
+    echo "ERROR: seqz_binning produced unusable output for ${chrom}: ${small}.tmp" >&2
+    rm -f "${small}.tmp"
+    return 1
+  fi
+  mv "${small}.tmp" "${small}"
+}
+
 do_pileup() {
-  if [[ -s "${BINNED}" && -f "${DONE_PILEUP}" && "${FORCE}" != "1" ]]; then
+  if [[ -s "${BINNED}" && -f "${DONE_PILEUP}" && "${FORCE}" != "1" ]] && is_usable_seqz "${BINNED}"; then
     echo "[$(date -Is)] sequenza pileup already done -> ${BINNED}"
     return 0
   fi
-  export -f run_chrom
+  export -f run_chrom bin_one_chrom is_usable_seqz cat_seqz
   export SAMPLE_ID TUMOR_BAM NORMAL_BAM REF GC OUTDIR SAMTOOLS TABIX QLIMIT MIN_DEPTH_N HOM HET FORCE
-  export SEQUENZA_PY BAM2SEQZ_WRAP
+  export SEQUENZA_PY BAM2SEQZ_WRAP BIN_WINDOW SEQUENZA_BIN
   # shellcheck disable=SC2086
   printf "%s\n" ${CHROMS} | xargs -I{} -P "${CHUNK_JOBS}" bash -c "run_chrom \"{}\""
 
@@ -198,6 +253,7 @@ do_pileup() {
       exit 1
     fi
     # gzip -t can pass on truncated content; seqz rows must have 14 fields
+    # (hardening kept from post-gold shared revision; not in original sunbinbin file)
     last_nf="$(zcat "$f" | tail -n 1 | awk -F'\t' '{print NF}')"
     if [[ "${last_nf}" != "14" ]]; then
       echo "ERROR truncated/bad last line NF=${last_nf} in $f (need 14); delete and re-run bam2seqz" >&2
@@ -205,31 +261,34 @@ do_pileup() {
     fi
   done
 
-  echo "[$(date -Is)] merge chrom seqz"
+  # Bin per chromosome then merge small seqz (sunbinbin gold).
+  echo "[$(date -Is)] seqz_binning per chromosome"
+  mkdir -p "${OUTDIR}/chrom_binned"
+  # shellcheck disable=SC2086
+  printf "%s\n" ${CHROMS} | xargs -I{} -P "${CHUNK_JOBS}" bash -c "bin_one_chrom \"{}\""
+
+  echo "[$(date -Is)] merge binned seqz -> ${BINNED}"
   {
     first=1
     for chrom in ${CHROMS}; do
       safe="$(echo "${chrom}" | tr ':/-' '___')"
-      f="${OUTDIR}/chrom/${SAMPLE_ID}.${safe}.seqz.gz"
+      f="${OUTDIR}/chrom_binned/${SAMPLE_ID}.${safe}.small.seqz.gz"
+      [[ -s "$f" ]] || { echo "ERROR missing binned $f" >&2; exit 1; }
       if [[ "$first" == 1 ]]; then
-        zcat "$f"
+        cat_seqz "$f"
         first=0
       else
-        zcat "$f" | tail -n +2
+        cat_seqz "$f" | tail -n +2
       fi
-      # Newline between chrom blocks avoids merged-line field unpack errors at binning.
+      # guarantee a newline between chroms even if a file omits the last NL
       printf '\n'
     done
-  } | gzip -c > "${MERGED}.tmp"
-  gzip -t "${MERGED}.tmp"
-  mv "${MERGED}.tmp" "${MERGED}"
-
-  echo "[$(date -Is)] seqz_binning"
-  run_env sequenza-utils seqz_binning -s "${MERGED}" -w "${BIN_WINDOW}" -T "${TABIX}" -o "${BINNED}.tmp"
-  # Output is often plain TSV named .gz; do not gzip -t here — R fit resolves via magic bytes.
+  } | awk 'NF==0{next} /^chromosome/{if(seen++) next} {print}' \
+    | gzip -c > "${BINNED}.tmp"
+  gzip -t "${BINNED}.tmp"
   mv "${BINNED}.tmp" "${BINNED}"
   date -Is > "${DONE_PILEUP}"
-  echo "[$(date -Is)] sequenza pileup done"
+  echo "[$(date -Is)] sequenza pileup done (per-chrom bin + merge small)"
 }
 
 do_fit() {

@@ -27,9 +27,31 @@ CASE_ROOT="${CASE_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
 NEOAG_ROOT="${NEOAG_ROOT:-}"  # resolved by lib_portable_env.sh
 export NEOAG_ROOT
 
+# Canonical tool scripts live under shared_scripts (all patients launch from here).
+# Case-local SCRIPT_DIR copies are thin fallbacks only.
+SHARED_SCRIPTS="${SHARED_SCRIPTS:-/mnt/zzbnew/peixunban/gl/mjx/neoag/shared_scripts}"
+export SHARED_SCRIPTS
+
+shared_tool() {
+  # usage: shared_tool sequenza/run_sequenza_steps.sh | run_purple_steps.sh
+  local rel="$1"
+  local p
+  for p in \
+    "${SHARED_SCRIPTS}/${rel}" \
+    "${SHARED_SCRIPTS}/case_templates/${rel##*/}" \
+    "${SCRIPT_DIR}/${rel##*/}"
+  do
+    if [[ -f "$p" ]]; then
+      echo "$p"
+      return 0
+    fi
+  done
+  echo "ERROR: shared tool not found: ${rel} (SHARED_SCRIPTS=${SHARED_SCRIPTS})" >&2
+  return 1
+}
+
 # shellcheck source=/dev/null
-source "${NEOAG_ROOT}/conf/tools.env.sh"
-[[ -f "${NEOAG_ROOT}/conf/tools.env.local.sh" ]] && source "${NEOAG_ROOT}/conf/tools.env.local.sh"
+source "${SCRIPT_DIR}/lib_portable_env.sh"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/lib_tool_timing.sh"
 # shellcheck source=/dev/null
@@ -196,7 +218,7 @@ pileup_sequenza() {
   CHUNK_JOBS="${CHUNK_JOBS}" \
   SEQUENZA_STEP=pileup \
   FORCE="${FORCE_PILEUP}" \
-  bash "${SCRIPT_DIR}/run_sequenza_steps.sh"
+  bash "$(shared_tool sequenza/run_sequenza_steps.sh)"
   echo "[$(ts)] Sequenza pileup DONE"
 }
 
@@ -216,7 +238,7 @@ pileup_purple() {
   HMFTOOLS_JVM_MEM="${HMFTOOLS_JVM_MEM}" \
   PURPLE_STEP=pileup \
   FORCE="${FORCE_PILEUP}" \
-  bash "${SCRIPT_DIR}/run_purple_steps.sh"
+  bash "$(shared_tool run_purple_steps.sh)"
   echo "[$(ts)] PURPLE AMBER+COBALT DONE"
 }
 
@@ -234,7 +256,7 @@ pileup_ascat() {
   LOG="${ASCAT_OUT}/run.pileup.log" \
   ASCAT_STEP=pileup \
   FORCE="${FORCE_PILEUP}" \
-  bash "${SCRIPT_DIR}/run_ascat_from_facets.sh"
+  bash "$(shared_tool run_ascat_from_facets.sh)"
   echo "[$(ts)] ASCAT convert-from-FACETS DONE"
 }
 
@@ -315,7 +337,7 @@ fit_sequenza() {
   LOG="${SEQUENZA_OUT}/run.fit.log" \
   SEQUENZA_STEP=fit \
   FORCE="${FORCE_FIT}" \
-  bash "${SCRIPT_DIR}/run_sequenza_steps.sh"
+  bash "$(shared_tool sequenza/run_sequenza_steps.sh)"
   echo "[$(ts)] Sequenza fit DONE"
 }
 
@@ -343,7 +365,7 @@ fit_purple() {
   HMFTOOLS_JVM_MEM="${HMFTOOLS_JVM_MEM}" \
   PURPLE_STEP=fit \
   FORCE="${FORCE_FIT}" \
-  bash "${SCRIPT_DIR}/run_purple_steps.sh"
+  bash "$(shared_tool run_purple_steps.sh)"
   echo "[$(ts)] PURPLE fit DONE"
 }
 
@@ -363,7 +385,7 @@ fit_ascat() {
   LOG="${ASCAT_OUT}/run.fit.log" \
   ASCAT_STEP=fit \
   FORCE="${FORCE_FIT}" \
-  bash "${SCRIPT_DIR}/run_ascat_from_facets.sh"
+  bash "$(shared_tool run_ascat_from_facets.sh)"
   echo "[$(ts)] ASCAT fit DONE"
 }
 

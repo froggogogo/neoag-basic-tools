@@ -295,12 +295,14 @@ def sync_sequenza() -> list[str]:
     dst = SHARED / "sequenza"
     dst.mkdir(parents=True, exist_ok=True)
     synced = []
-    # Prefer skill gold path over live sunbinbin (may be stale per-chrom bin version).
+    # Prefer skill gold path (per-chrom bin + awk merge; fake .gz accepted).
+    # Do not prefer live sunbinbin if skill is present — keep shared == skill.
     for src in [SKILL_SEQ / "run_sequenza_steps.sh", SUN_DNA / "run_sequenza_steps.sh"]:
         if src.is_file():
             raw = src.read_text(encoding="utf-8", errors="replace")
             write_executable(dst / "run_sequenza_steps.sh", raw)
-            # run_cnv_all calls $CASE/scripts/run_sequenza_steps.sh — keep case_templates in sync
+            # Thin case_templates copy for rsync into $CASE/scripts (orchestrators
+            # should call shared_scripts/sequenza/ via SHARED_SCRIPTS).
             write_executable(SHARED / "case_templates" / "run_sequenza_steps.sh", raw)
             synced.append("run_sequenza_steps.sh")
             synced.append("case_templates/run_sequenza_steps.sh")
