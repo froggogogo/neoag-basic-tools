@@ -47,11 +47,15 @@ fi
 
 FIT_R="${SEQUENZA_FIT_R:-}"
 if [[ -z "$FIT_R" ]]; then
+  # Prefer case-local / template next to this script, then DEPS copies.
+  # Do NOT prefer stale DEPS/src/neo first — that predates template→case model.
   for r in \
-    "${DEPS_DIR}/src/neo/scripts/run_sequenza_fit.R" \
-    "${DEPS_DIR}/tools/sequenza/run_sequenza_fit.R" \
     "${_SCRIPT_DIR}/run_sequenza_fit.R" \
-    "${_SCRIPT_DIR}/../../patches/run_sequenza_fit.fread.R"
+    "${_SCRIPT_DIR}/../../patches/run_sequenza_fit.fread.R" \
+    "${DEPS_DIR}/shared_scripts/sequenza/run_sequenza_fit.R" \
+    "${DEPS_DIR}/tools/sequenza/run_sequenza_fit.R" \
+    "${DEPS_DIR}/scripts/patches/run_sequenza_fit.fread.R" \
+    "${DEPS_DIR}/src/neo/scripts/run_sequenza_fit.R"
   do
     [[ -f "$r" ]] && FIT_R="$r" && break
   done
