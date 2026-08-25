@@ -283,12 +283,18 @@ do_pileup() {
       # guarantee a newline between chroms even if a file omits the last NL
       printf '\n'
     done
-  } | awk 'NF==0{next} /^chromosome/{if(seen++) next} {print}' \
-    | gzip -c > "${BINNED}.tmp"
-  gzip -t "${BINNED}.tmp"
+  # sunbinbin β: write plain TSV named *.small.seqz.gz (NOT real gzip).
+  # seqz_binning per-chrom outputs are already fake .gz; R fit awk-split expects text.
+  } | awk 'NF==0{next} /^chromosome/{if(seen++) next} {print}' > "${BINNED}.tmp"
+  [[ -s "${BINNED}.tmp" ]] || { echo "ERROR: empty merged binned seqz" >&2; exit 1; }
   mv "${BINNED}.tmp" "${BINNED}"
+  plain="${BINNED%.gz}"
+  if [[ "${plain}" != "${BINNED}" ]]; then
+    rm -f "${plain}"
+    ln "${BINNED}" "${plain}" 2>/dev/null || cp -a "${BINNED}" "${plain}"
+  fi
   date -Is > "${DONE_PILEUP}"
-  echo "[$(date -Is)] sequenza pileup done (per-chrom bin + merge small)"
+  echo "[$(date -Is)] sequenza pileup done (per-chrom bin + merge small; fake .gz like sunbinbin)"
 }
 
 do_fit() {

@@ -20,12 +20,17 @@ suppressPackageStartupMessages({
   library(data.table)
 })
 
+seqz_is_gzip <- function(path) {
+  con <- file(path, "rb")
+  on.exit(close(con), add = TRUE)
+  magic <- readBin(con, what = "raw", n = 2L)
+  length(magic) == 2L && identical(magic, as.raw(c(0x1f, 0x8b)))
+}
+
 resolve_seqz_path <- function(path) {
   if (!file.exists(path)) stop("seqz file not found: ", path)
-  con <- file(path, "rb")
-  magic <- readBin(con, what = "raw", n = 2L)
-  close(con)
-  is_gzip <- length(magic) == 2L && identical(magic, as.raw(c(0x1f, 0x8b)))
+  is_gzip <- seqz_is_gzip(path)
+  # sunbinbin β / seqz_binning: plain TSV named *.gz → hardlink twin without .gz
   if (grepl("\\.gz$", path, ignore.case = TRUE) && !is_gzip) {
     plain <- sub("\\.gz$", "", path, ignore.case = TRUE)
     if (!file.exists(plain)) {
@@ -34,6 +39,28 @@ resolve_seqz_path <- function(path) {
       if (!ok) file.symlink(normalizePath(path), plain)
     }
     cat(sprintf("[%s] seqz named .gz but is plain text; using %s\n", Sys.time(), plain))
+    return(plain)
+  }
+  # Real gzip (e.g. mistaken | gzip -c merge): materialize plain for awk split
+  if (is_gzip) {
+    plain <- if (grepl("\\.gz$", path, ignore.case = TRUE)) {
+      sub("\\.gz$", "", path, ignore.case = TRUE)
+    } else {
+      paste0(path, ".ungz")
+    }
+    need <- !file.exists(plain) || file.info(plain)$mtime < file.info(path)$mtime
+    if (need) {
+      cat(sprintf("[%s] real gzip seqz; decompressing -> %s\n", Sys.time(), plain))
+      status <- system2("gzip", c("-dc", path), stdout = plain, stderr = TRUE)
+      if (!is.null(attr(status, "status")) && attr(status, "status") != 0) {
+        stop("gzip -dc failed for ", path, ": ", paste(status, collapse = "\n"))
+      }
+      if (!file.exists(plain) || file.info(plain)$size == 0) {
+        stop("decompress produced empty file: ", plain)
+      }
+    } else {
+      cat(sprintf("[%s] reuse decompressed seqz %s\n", Sys.time(), plain))
+    }
     return(plain)
   }
   path
