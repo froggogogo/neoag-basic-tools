@@ -91,6 +91,38 @@ if [[ -x "${E}/neoag-sequenza/bin/Rscript" ]]; then
     miss "r:data.table" "neoag-sequenza"
   fi
 fi
+# LOHHLA gold path uses neoag-fusion Rscript (run_lohhla_sample.sh) — not lohhla-mod.
+if [[ -x "${E}/neoag-fusion/bin/Rscript" ]]; then
+  for _pkg in optparse data.table GenomicRanges Rsamtools Biostrings; do
+    if "${E}/neoag-fusion/bin/Rscript" -e "cat(requireNamespace('${_pkg}', quietly=TRUE))" 2>/dev/null | grep -q TRUE; then
+      ok "r:lohhla:${_pkg}" "neoag-fusion"
+    else
+      miss "r:lohhla:${_pkg}" "neoag-fusion"
+    fi
+  done
+else
+  miss "r:lohhla:Rscript" "neoag-fusion"
+fi
+# SNAF: mhcgnomes.Class2Pair + mhcflurry must import (version alone is not enough).
+if [[ -x "${E}/neoag-snaf/bin/python" ]]; then
+  if "${E}/neoag-snaf/bin/python" -c "from mhcgnomes import Class2Pair" >/dev/null 2>&1; then
+    ok "py:mhcgnomes.Class2Pair" "neoag-snaf"
+  else
+    miss "py:mhcgnomes.Class2Pair" "neoag-snaf"
+  fi
+  if "${E}/neoag-snaf/bin/python" -c "import mhcflurry" >/dev/null 2>&1; then
+    ok "py:mhcflurry" "neoag-snaf"
+  else
+    miss "py:mhcflurry" "neoag-snaf"
+  fi
+  if "${E}/neoag-snaf/bin/python" -c "import snaf, mygene, biothings_client" >/dev/null 2>&1; then
+    ok "py:snaf_stack" "neoag-snaf"
+  else
+    miss "py:snaf_stack" "neoag-snaf"
+  fi
+else
+  miss "py:neoag-snaf" "${E}/neoag-snaf/bin/python"
+fi
 if [[ -x "${E}/neoag-ascat/bin/Rscript" ]]; then
   if "${E}/neoag-ascat/bin/Rscript" -e 'suppressPackageStartupMessages(library(ASCAT)); cat("OK\n")' >/dev/null 2>&1; then
     ok "r:ASCAT" "neoag-ascat"
