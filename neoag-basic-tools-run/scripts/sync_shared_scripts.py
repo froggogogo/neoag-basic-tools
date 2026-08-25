@@ -337,31 +337,35 @@ def sync_snaf_splicemutr() -> list[str]:
     synced = []
     dst = SHARED / "snaf"
     dst.mkdir(parents=True, exist_ok=True)
-    # Prefer existing NAS snaf workflow; refresh pipeline from skill if newer.
-    allow = {"run_snaf_pipeline.sh", "snaf_sample_workflow.py"}
-    skill_pipe = _SKILL_ROOT / "run_snaf_pipeline.sh"
-    if not skill_pipe.is_file():
-        skill_pipe = _SKILL_ROOT / "tools" / "snaf" / "run_snaf_pipeline.sh"
-    if skill_pipe.is_file():
-        shutil.copy2(skill_pipe, dst / "run_snaf_pipeline.sh")
-        synced.append("snaf/run_snaf_pipeline.sh")
-    for name in sorted(allow):
-        if name == "run_snaf_pipeline.sh":
-            continue
-        for src in [dst / name, ROOT / "shared_scripts/snaf" / name, SHARED_MIRROR / "snaf" / name]:
-            if src.is_file():
-                if src.resolve() != (dst / name).resolve():
-                    shutil.copy2(src, dst / name)
-                synced.append(f"snaf/{name}")
-                break
+    skill_sm = _SKILL_ROOT / "tools" / "snaf"
+    if not skill_sm.is_dir():
+        skill_sm = Path(__file__).resolve().parent / "tools" / "snaf"
+    # Always refresh from skill tools/snaf; fall back to zzbnew mirror.
+    sources = [d for d in (skill_sm, SHARED_MIRROR / "snaf", ROOT / "shared_scripts" / "snaf") if d.is_dir()]
+    names = {
+        "run_snaf_pipeline.sh",
+        "run_snaf_patient.sh",
+        "snaf_sample_workflow.py",
+    }
+    for name in sorted(names):
+        for src_dir in sources:
+            src = src_dir / name
+            if not src.is_file():
+                continue
+            shutil.copy2(src, dst / name)
+            if name.endswith(".sh") or name.endswith(".py"):
+                mode = (dst / name).stat().st_mode
+                (dst / name).chmod(mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+            synced.append(f"snaf/{name}")
+            break
 
     # SpliceMutr templates → shared_scripts/splicemutr (canonical on neoag-100T)
     sm_dst = SHARED / "splicemutr"
     sm_dst.mkdir(parents=True, exist_ok=True)
-    skill_sm = _SKILL_ROOT / "tools" / "splicemutr"
+    skill_splice = _SKILL_ROOT / "tools" / "splicemutr"
     sources = []
-    if skill_sm.is_dir():
-        sources.append(skill_sm)
+    if skill_splice.is_dir():
+        sources.append(skill_splice)
     sources.append(SHARED_MIRROR / "splicemutr")
     sources.append(ROOT / "shared_scripts" / "splicemutr")
     for src_dir in sources:

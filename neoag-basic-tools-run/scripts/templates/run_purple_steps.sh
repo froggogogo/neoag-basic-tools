@@ -11,17 +11,28 @@ source "${_SCRIPT_DIR}/lib_site_defaults.sh"
 resolve_ref_fasta
 ROOT="${NEOAG_ROOT}"
 DEPS="${NEOAG_BASIC_DEPS_DIR:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps}"
+# Prefer neoag-100T HMFTOOLS; never rely on missing NEOAG_ROOT/tools/HMFTOOLS/.conda (66).
 HMFTOOLS_BIN=""
 for _hmf in \
   "${DEPS}/tools/neodata_tools/HMFTOOLS/.conda/bin" \
+  "${HMFTOOLS_CONDA_BIN:-}" \
   "${ROOT}/tools/HMFTOOLS/.conda/bin"
 do
-  [[ -x "${_hmf}/amber" ]] && HMFTOOLS_BIN="${_hmf}" && break
+  [[ -n "${_hmf}" && -x "${_hmf}/amber" && -x "${_hmf}/cobalt" && -x "${_hmf}/purple" ]] || continue
+  HMFTOOLS_BIN="${_hmf}"
+  break
 done
-if [[ -n "${HMFTOOLS_BIN}" ]]; then
-  export PATH="${HMFTOOLS_BIN}:${PATH}"
-else
-  export PATH="${ROOT}/bin:${PATH}"
+if [[ -z "${HMFTOOLS_BIN}" ]]; then
+  echo "ERROR: HMFTOOLS amber/cobalt/purple not found under:" >&2
+  echo "  ${DEPS}/tools/neodata_tools/HMFTOOLS/.conda/bin" >&2
+  echo "  ${ROOT}/tools/HMFTOOLS/.conda/bin" >&2
+  echo "Install/rsync HMFTOOLS .conda onto neoag-100T deps (not NEOAG_ROOT alone)." >&2
+  exit 2
+fi
+export PATH="${HMFTOOLS_BIN}:${PATH}"
+# Avoid conda/mamba trying a missing NEOAG_ROOT HMFTOOLS prefix
+if [[ -n "${CONDA_PREFIX:-}" && "${CONDA_PREFIX}" == *"/HMFTOOLS/.conda" && ! -d "${CONDA_PREFIX}" ]]; then
+  unset CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_PROMPT_MODIFIER || true
 fi
 
 PATIENT_ID="${PATIENT_ID:?ERROR: set PATIENT_ID}"
@@ -61,6 +72,8 @@ echo "    normal=${NORMAL_SAMPLE} bam=${NORMAL_BAM}"
 echo "    somatic_vcf=${SOMATIC_VCF:-<none>}"
 echo "    jvm=${HMFTOOLS_JVM_MEM} threads=${THREADS}"
 echo "    out=${OUT}"
+echo "    HMFTOOLS_BIN=${HMFTOOLS_BIN}"
+echo "    amber=$(command -v amber)"
 
 require_file() {
   [[ -f "$1" ]] || { echo "ERROR: missing $2: $1" >&2; exit 2; }
