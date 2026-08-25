@@ -138,7 +138,7 @@ RUN_PRODUCTION=1 STAGE=production bash run_case_all.sh  # 可选
 ### Sequenza merge 中断
 
 - 检查 `yumin.merged.seqz.gz.tmp` 是否不完整；删除 tmp 后 `SEQUENZA_STEP=pileup` 续跑
-- 确保用 `shared_scripts/sequenza/run_sequenza_steps.sh`（per-chrom bin → merge binned + awk；假 .gz 兼容），由 `run_cnv_all.sh` 经 `SHARED_SCRIPTS` 调用
+- 确保把 `neoag-100T/.../shared_scripts/sequenza/run_sequenza_steps.sh`（per-chrom bin → merge binned + awk；假 .gz 兼容）**拷进** `$CASE/scripts/` 后从病例目录执行
 
 ### LOHHLA picard.jar not found（66）
 

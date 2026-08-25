@@ -44,3 +44,7 @@
 - 病例续跑日志：
   - jinganxin：`…/jinganxin/sequenza/run.resume_gold_20260825_112645.log`
   - yumin：`…/yumin-tumor-rna/dna/sequenza/run.resume_gold_20260825_112649.log`
+
+
+## 更新 2026-08-25 11:35
+撤销 runtime `shared_tool`；模板权威路径改为 neoag-100T `.../shared_scripts/`，病例执行本地副本。

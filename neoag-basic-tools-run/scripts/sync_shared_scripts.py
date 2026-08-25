@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
-"""Sync sunbinbin gold scripts → NAS shared_scripts (66/134/169).
+"""Sync gold scripts → neoag-100T shared_scripts (canonical) + zzbnew mirror.
 
-Outputs:
-  shared_scripts/case_templates/       DNA orchestrators + libs
-  shared_scripts/short_rna_templates/ per-tool RNA wrappers + inputs.env.sh.template
-  shared_scripts/sequenza/             pileup/fit runner + helpers
-  shared_scripts/rna/                  built-in master orchestrator
-  shared_scripts/snaf/                 (refresh from sunbinbin ops if present)
-  shared_scripts/splicemutr/           (already generic)
+Canonical:
+  /mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/shared_scripts/
+Mirror (compat):
+  /mnt/zzbnew/peixunban/gl/mjx/neoag/shared_scripts/
 
-Patches:
-  - NEOAG_ROOT hardcode → lib_portable_env.sh
-  - CASE_ROOT overridable via env
-  - sunbinbin zjl BAM/VCF defaults → empty (must export or set in case inputs)
-  - orchestrators call generic *.sh names in same dir
+Workflow: rsync templates into $CASE/scripts/, edit params, run case-local copies.
 """
 from __future__ import annotations
 
@@ -25,8 +18,12 @@ from pathlib import Path
 ROOT = Path("/mnt/zzbnew/peixunban/gl/mjx/neoag")
 SUN_DNA = ROOT / "sunbinbin/scripts"
 SUN_RNA = ROOT / "sunbinbin/short-rna/scripts"
-SHARED = ROOT / "shared_scripts"
+# Canonical templates on neoag-100T; zzbnew shared_scripts is a compatibility mirror.
 DEPS = Path("/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps")
+SHARED_CANONICAL = DEPS / "shared_scripts"
+SHARED = SHARED_CANONICAL  # primary write target
+SHARED_MIRROR = ROOT / "shared_scripts"  # zzbnew mirror for older callers
+
 
 # When run on NAS host: place skill artifacts beside this script (see deploy step).
 _SKILL_ROOT = Path(__file__).resolve().parent
@@ -403,40 +400,58 @@ def main() -> None:
     print("=== patch sunbinbin/scripts in place ===")
     patch_sunbinbin_in_place()
 
+    # Mirror canonical templates to zzbnew for older docs/callers still pointing there.
+    if SHARED_MIRROR.resolve() != SHARED_CANONICAL.resolve():
+        print("=== mirror → zzbnew shared_scripts ===")
+        SHARED_MIRROR.mkdir(parents=True, exist_ok=True)
+        # rsync-like: copy tree
+        for src in SHARED_CANONICAL.rglob("*"):
+            if src.is_dir():
+                continue
+            rel = src.relative_to(SHARED_CANONICAL)
+            dst = SHARED_MIRROR / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            if src.suffix in {".sh", ".py"} or src.name.endswith(".sh"):
+                mode = dst.stat().st_mode
+                dst.chmod(mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        print(f"  mirrored to {SHARED_MIRROR}")
+
     top_readme = SHARED / "README.md"
     top_readme.write_text(
-        """# shared_scripts — 66 / 134 / 169 通用脚本
+        """# shared_scripts — 通用脚本模板（canonical: neoag-100T）
+
+**权威路径**：`/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/shared_scripts/`  
+zzbnew 上的同名目录仅为兼容镜像；新病例请从 100T 拷贝。
 
 | 目录 | 用途 |
 |------|------|
 | `case_templates/` | DNA: HLA, CNV, LOHHLA, VEP, pVACseq, sliding |
 | `short_rna_templates/` | RNA per-tool wrappers + `inputs.env.sh.template` |
-| `sequenza/` | Sequenza pileup/fit（金路径：merge raw → binning → fread fit） |
+| `sequenza/` | Sequenza pileup/fit（金路径：per-chrom bin → merge binned → fread fit） |
 | `rna/` | Built-in `run_short_rna_master.sh` |
 | `snaf/` | SNAF pipeline |
 | `splicemutr/` | SpliceMutr patient runner |
 
-## 命名（重要）
-
-请只用通用名：`run_lohhla.sh`、`run_hla_all.sh` …  
-历史上的 `*_sunbinbin.sh` **仅是兼容别名**（`exec` 到同名通用脚本），不是第二套逻辑。  
-`sunbinbin` 只是早期金标准病例名，共享模板不应再按病例命名。
-
-## 新病例
+## 用法（填参后拷进病例目录再跑）
 
 ```bash
-CASE=/mnt/zzbnew/.../neoag/MYSAMPLE
-rsync -a .../shared_scripts/case_templates/ "$CASE/scripts/"
-rsync -a .../shared_scripts/short_rna_templates/ "$CASE/short-rna/scripts/"
-cp .../short_rna_templates/inputs.env.sh.template "$CASE/short-rna/inputs.env.sh"
+TPL=/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/shared_scripts
+CASE=/mnt/zzbnew/peixunban/gl/mjx/neoag/MYSAMPLE   # 病例工作目录可仍在 zzbnew
+mkdir -p "$CASE/scripts" "$CASE/short-rna/scripts"
+rsync -a "$TPL/case_templates/" "$CASE/scripts/"
+rsync -a "$TPL/sequenza/run_sequenza_steps.sh" "$TPL/sequenza/bam2seqz_nulsafe.py" \
+         "$TPL/sequenza/run_sequenza_fit.R" "$CASE/scripts/" 2>/dev/null || true
+rsync -a "$TPL/short_rna_templates/" "$CASE/short-rna/scripts/"
+# 编辑 $CASE/case.config.sh / short-rna/inputs.env.sh 填 PATIENT_ID、BAM、VCF
 export PATIENT_ID TUMOR_BAM NORMAL_BAM SOMATIC_VCF
 bash "$CASE/scripts/run_hla_all.sh"
+bash "$CASE/scripts/run_cnv_all.sh"
 ```
 
-运行前 **必须** export 样本 BAM/VCF。  
-`POLYSOLVER_HOME` / `LOHHLA_HOME` / `NOVOALIGN_LICENSE_FILE` 由 `lib_portable_env.sh` + neoag_100T `site.env.sh` 解析（勿写死 `/home/na/...`）。
+编排脚本一律执行 **`$CASE/scripts/...`（病例本地副本）**，不在运行时去找母版路径。
 
-同步：`python3 sync_shared_scripts.py`（neoag-basic-tools-run/scripts/）
+同步：`python3 sync_shared_scripts.py`（写入 100T，并镜像到 zzbnew）
 """,
         encoding="utf-8",
     )

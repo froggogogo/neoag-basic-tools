@@ -9,9 +9,9 @@
 # 创建:
 #   $CASE_ROOT/scripts/          ← rsync from shared_scripts/case_templates
 #   $CASE_ROOT/short-rna/scripts/ ← rsync from short_rna_templates
-# Tool binaries/orchestrators should launch via SHARED_SCRIPTS
-#   (run_cnv_all → shared_tool sequenza/run_sequenza_steps.sh etc.)
-# Case-local copies of run_sequenza_steps.sh are fallbacks only.
+# Templates: copy from neoag-100T shared_scripts into $CASE/scripts/, then run case-local.
+# Tool binaries/orchestrators execute as $CASE/scripts/run_*.sh (not runtime SHARED path).
+# Case-local copies of run_sequenza_steps.sh are the live runners after bootstrap.
 #
 # 依赖: SHARED_SCRIPTS, NEOAG_BASIC_DEPS_DIR (via load_config)
 # =============================================================================
@@ -21,12 +21,15 @@ UP="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "${UP}/scripts/lib/load_config.sh" "${1:-${CASE_CONFIG:-}}"
 
-SHARED="${SHARED_SCRIPTS:-/mnt/zzbnew/peixunban/gl/mjx/neoag/shared_scripts}"
+SHARED="${SHARED_SCRIPTS:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/shared_scripts}"
+if [[ ! -d "${SHARED}/case_templates" ]]; then
+  SHARED="/mnt/zzbnew/peixunban/gl/mjx/neoag/shared_scripts"
+fi
 [[ -d "${SHARED}/case_templates" ]] || { echo "ERROR: missing ${SHARED}/case_templates" >&2; exit 1; }
 
 echo "==> bootstrap_case_dir $(date -Is)"
 echo "    CASE_ROOT=${CASE_ROOT}"
-echo "    SHARED=${SHARED}"
+echo "    SHARED=${SHARED}  # templates → copy into case, then run from \$CASE/scripts"
 
 mkdir -p "${CASE_ROOT}"/{scripts,short-rna/scripts,logs,tmp,evidence,hla,facets,sequenza,purple,ascat,lohhla,vep,pvacseq,sliding,somatic}
 

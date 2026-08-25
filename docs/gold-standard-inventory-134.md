@@ -165,7 +165,7 @@ HMFTOOLS：在 deps `tools/neodata_tools/HMFTOOLS/.conda`（非 NEOAG_ROOT 内�
 2. `neoag-gatk`：picard-3.5.0 已就位
 3. `run_purple_steps.sh` / `run_lohhla.sh`：模板已改走 deps HMFTOOLS / 扩展 picard 搜索
 4. `run_sequenza_steps.sh`：shared / skill / deps 均为 **per-chrom bin → merge binned**（对齐 sunbinbin `80cb04e4`，假 .gz 可接受）
-5. 病例编排从 `SHARED_SCRIPTS` 启动工具脚本，不依赖病例目录陈旧副本
+5. 新病例：从 neoag-100T `shared_scripts` **rsync 模板到 `$CASE/scripts/`**，改参数后在病例目录执行（不在运行时绑定母版路径）
 
 ### 169 待修复
 
