@@ -340,16 +340,44 @@ def sync_snaf_splicemutr() -> list[str]:
     # Prefer existing NAS snaf workflow; refresh pipeline from skill if newer.
     allow = {"run_snaf_pipeline.sh", "snaf_sample_workflow.py"}
     skill_pipe = _SKILL_ROOT / "run_snaf_pipeline.sh"
+    if not skill_pipe.is_file():
+        skill_pipe = _SKILL_ROOT / "tools" / "snaf" / "run_snaf_pipeline.sh"
     if skill_pipe.is_file():
         shutil.copy2(skill_pipe, dst / "run_snaf_pipeline.sh")
         synced.append("snaf/run_snaf_pipeline.sh")
     for name in sorted(allow):
         if name == "run_snaf_pipeline.sh":
             continue
-        for src in [dst / name, ROOT / "shared_scripts/snaf" / name]:
+        for src in [dst / name, ROOT / "shared_scripts/snaf" / name, SHARED_MIRROR / "snaf" / name]:
             if src.is_file():
+                if src.resolve() != (dst / name).resolve():
+                    shutil.copy2(src, dst / name)
                 synced.append(f"snaf/{name}")
                 break
+
+    # SpliceMutr templates → shared_scripts/splicemutr (canonical on neoag-100T)
+    sm_dst = SHARED / "splicemutr"
+    sm_dst.mkdir(parents=True, exist_ok=True)
+    skill_sm = _SKILL_ROOT / "tools" / "splicemutr"
+    sources = []
+    if skill_sm.is_dir():
+        sources.append(skill_sm)
+    sources.append(SHARED_MIRROR / "splicemutr")
+    sources.append(ROOT / "shared_scripts" / "splicemutr")
+    for src_dir in sources:
+        if not src_dir.is_dir():
+            continue
+        for src in sorted(src_dir.iterdir()):
+            if not src.is_file():
+                continue
+            if src.suffix not in {".sh", ".py"} and not src.name.endswith(".sh"):
+                continue
+            shutil.copy2(src, sm_dst / src.name)
+            if src.suffix in {".sh", ".py"} or src.name.endswith(".sh"):
+                mode = (sm_dst / src.name).stat().st_mode
+                (sm_dst / src.name).chmod(mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+            synced.append(f"splicemutr/{src.name}")
+        break
     return synced
 
 

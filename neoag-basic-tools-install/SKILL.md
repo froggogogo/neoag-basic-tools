@@ -78,6 +78,18 @@ See [references/runtime-hardening.md](references/runtime-hardening.md). Summary:
 
 `/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps`
 
+## Shared refs (RSEM / EasyFuse conda / SpliceMutr R)
+
+Canonical under `$DEPS_DIR/shared_refs/` (migrated off zzbnew):
+
+| Path | Env |
+|------|-----|
+| `shared_refs/rsem_gencode_v49/gencode_v49` | `RSEM_REFERENCE` |
+| `shared_refs/easyfuse_nextflow_conda` | `EASYFUSE_NEXTFLOW_CONDA` |
+| `shared_refs/R_library_splicemutr` | `SPLICEMUTR_R_LIBS` → prepended to `R_LIBS_SITE` |
+
+`site.env.sh` / `site_runtime.sh` export these when the dirs exist. Templates live in `$DEPS_DIR/shared_scripts/splicemutr/`.
+
 ## Shared conda (host prefix, not OSS)
 
 `--one-shot` **不会**把 Miniforge 装到 neoag_100T（OSS/FUSE 上 conda 前缀会坏）。本机发现顺序：

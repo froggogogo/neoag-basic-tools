@@ -57,6 +57,11 @@ if [[ ! -d "${SPLICEMUTR_HOME}/Rscripts" ]]; then
     *10.200.65.169*) SPLICEMUTR_HOME="${SPLICEMUTR_HOME:-/root/neo/env_tool/tools/SpliceMutr}" ;;
   esac
 fi
+# SpliceMutr genome R pkgs live under shared_refs on neoag-100T
+SPLICEMUTR_R_LIBS="${SPLICEMUTR_R_LIBS:-${_DEPS}/shared_refs/R_library_splicemutr}"
+if [[ -d "${SPLICEMUTR_R_LIBS}" ]]; then
+  export R_LIBS_SITE="${SPLICEMUTR_R_LIBS}${R_LIBS_SITE:+:${R_LIBS_SITE}}"
+fi
 CONDA="${CONDA:-${_CONDA_BASE}/bin/conda}"
 ENV="${ENV:-${_CONDA_BASE}/envs/neoag-splicemutr}"
 NETMHCPAN="${NETMHCPAN:-${_DEPS}/licenses/predictors/netMHCpan/netMHCpan}"

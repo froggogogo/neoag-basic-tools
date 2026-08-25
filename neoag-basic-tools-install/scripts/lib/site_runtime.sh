@@ -540,6 +540,20 @@ neoag_site_activate() {
   export SALMON_INDEX="${SALMON_INDEX:-${deps}/refs/rna/gencode_v49/salmon_index}"
   export SALMON_TX2GENE="${SALMON_TX2GENE:-${deps}/refs/rna/gencode_v49/tx2gene.tsv}"
   export RSEM_TRANSCRIPTS_FA="${RSEM_TRANSCRIPTS_FA:-${deps}/refs/rna/gencode.v49.transcripts.fa.gz}"
+  # shared_refs migrated to neoag-100T (was zzbnew .../neoag/shared_refs)
+  export NEOAG_SHARED_REFS="${NEOAG_SHARED_REFS:-${deps}/shared_refs}"
+  # RSEM prefix is .../rsem_gencode_v49/gencode_v49 (files gencode_v49.*.bt2 etc.)
+  if [[ -s "${NEOAG_SHARED_REFS}/rsem_gencode_v49/gencode_v49.grp" ]]; then
+    export RSEM_REFERENCE="${RSEM_REFERENCE:-${NEOAG_SHARED_REFS}/rsem_gencode_v49/gencode_v49}"
+  fi
+  if [[ -d "${NEOAG_SHARED_REFS}/easyfuse_nextflow_conda" ]]; then
+    export EASYFUSE_NEXTFLOW_CONDA="${EASYFUSE_NEXTFLOW_CONDA:-${NEOAG_SHARED_REFS}/easyfuse_nextflow_conda}"
+  fi
+  if [[ -d "${NEOAG_SHARED_REFS}/R_library_splicemutr" ]]; then
+    export SPLICEMUTR_R_LIBS="${SPLICEMUTR_R_LIBS:-${NEOAG_SHARED_REFS}/R_library_splicemutr}"
+    # Prefer site library for SpliceMutr genome pkgs without clobbering user R_LIBS
+    export R_LIBS_SITE="${SPLICEMUTR_R_LIBS}${R_LIBS_SITE:+:${R_LIBS_SITE}}"
+  fi
   export NEOAG_SNAF_DB="${NEOAG_SNAF_DB:-${deps}/refs/snaf/reference/data}"
   export SNAF_DB="${SNAF_DB:-${NEOAG_SNAF_DB}}"
   if [[ -d "${deps}/tools/SpliceMutr" ]]; then
