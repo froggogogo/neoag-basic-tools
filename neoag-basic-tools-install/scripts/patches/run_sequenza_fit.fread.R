@@ -41,23 +41,32 @@ resolve_seqz_path <- function(path) {
     cat(sprintf("[%s] seqz named .gz but is plain text; using %s\n", Sys.time(), plain))
     return(plain)
   }
-  # Real gzip (e.g. mistaken | gzip -c merge): materialize plain for awk split
+  # Real gzip (e.g. mistaken | gzip -c merge): materialize plain for awk split.
+  # Do NOT use system2(stdout=path, stderr=TRUE) — R rewrites stdout=TRUE and either
+  # leaves an empty file (66) or slurps the whole stream into RAM (134, tens of GB).
   if (is_gzip) {
     plain <- if (grepl("\\.gz$", path, ignore.case = TRUE)) {
       sub("\\.gz$", "", path, ignore.case = TRUE)
     } else {
       paste0(path, ".ungz")
     }
-    need <- !file.exists(plain) || file.info(plain)$mtime < file.info(path)$mtime
+    need <- !file.exists(plain) || isTRUE(file.info(plain)$size == 0) ||
+      file.info(plain)$mtime < file.info(path)$mtime
     if (need) {
-      cat(sprintf("[%s] real gzip seqz; decompressing -> %s\n", Sys.time(), plain))
-      status <- system2("gzip", c("-dc", path), stdout = plain, stderr = TRUE)
-      if (!is.null(attr(status, "status")) && attr(status, "status") != 0) {
-        stop("gzip -dc failed for ", path, ": ", paste(status, collapse = "\n"))
+      cat(sprintf("[%s] real gzip seqz; decompressing via shell -> %s\n", Sys.time(), plain))
+      tmp <- paste0(plain, ".tmp.", Sys.getpid())
+      unlink(tmp)
+      cmd <- sprintf("gzip -dc %s > %s", shQuote(path), shQuote(tmp))
+      rc <- system(cmd)
+      if (!identical(as.integer(rc), 0L)) {
+        unlink(tmp)
+        stop("gzip -dc failed for ", path, " rc=", rc)
       }
-      if (!file.exists(plain) || file.info(plain)$size == 0) {
-        stop("decompress produced empty file: ", plain)
+      if (!file.exists(tmp) || isTRUE(file.info(tmp)$size == 0)) {
+        unlink(tmp)
+        stop("decompress produced empty file: ", tmp)
       }
+      file.rename(tmp, plain)
     } else {
       cat(sprintf("[%s] reuse decompressed seqz %s\n", Sys.time(), plain))
     }
