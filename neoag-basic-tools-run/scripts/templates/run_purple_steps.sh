@@ -90,13 +90,19 @@ _bam_stem() {
 
 _vcf_samples() {
   # Read genotype sample names from the SOMATIC_VCF path already set by the caller.
+  # Under `set -o pipefail`, gzip|awk early-exit yields SIGPIPE (141) and empties
+  # the sample list → wrong PATIENT_ID_tumor fallback. Parse inside a subshell
+  # with pipefail off so the header read always succeeds.
   local vcf="$1"
   local line=""
-  if [[ "$vcf" == *.gz ]]; then
-    line="$(gzip -dc "$vcf" 2>/dev/null | awk '/^#CHROM/{print; exit}')"
-  else
-    line="$(awk '/^#CHROM/{print; exit}' "$vcf")"
-  fi
+  line="$(
+    set +e +o pipefail
+    if [[ "$vcf" == *.gz ]]; then
+      gzip -dc "$vcf" 2>/dev/null | awk '/^#CHROM/{print; exit}'
+    else
+      awk '/^#CHROM/{print; exit}' "$vcf"
+    fi
+  )"
   [[ -n "$line" ]] || return 0
   # fields 10+ are sample names
   awk -F'\t' '{for (i=10; i<=NF; i++) print $i}' <<<"$line"
