@@ -61,8 +61,19 @@ DONE_AMBER="${AMBER_DIR}/.amber.done"
 DONE_COBALT="${COBALT_DIR}/.cobalt.done"
 DONE_FIT="${PURPLE_DIR}/.fit.done"
 
-# --- Sample ID resolution (PURPLE -tumor must match VCF genotype columns) ---
-# Priority: explicit override → VCF keyword (patient+tumor/blood) → BAM basename token → fallback.
+# --- Sample ID resolution (PURPLE -tumor/-reference must match VCF genotype columns) ---
+#
+# VCF *file* path: ONLY from case.config / env SOMATIC_VCF (user-supplied).
+# Never discover or guess the VCF by filename (e.g. *tumor*.vcf). One case = one somatic VCF.
+#
+# What we resolve here: which *column name inside that VCF* is tumor vs normal, so that
+# purple -tumor / -reference match AMBER/COBALT sample IDs and VCF genotypes.
+#
+# Priority:
+#   1) explicit TUMOR_SAMPLE_ID / NORMAL_SAMPLE_ID
+#   2) BAM stem ↔ VCF sample column (primary; covers FP*_L0*_451 lane IDs)
+#   3) optional keyword fallback: patient + tumor|blood|normal (separator-agnostic)
+#   4) ${PATIENT_ID}_tumor / ${PATIENT_ID}_blood
 _norm_token() {
   # lowercase + keep only alnum so jinganxin_tumor / jinganxin-tumor / jinganxin.tumor align
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]'
@@ -78,6 +89,7 @@ _bam_stem() {
 }
 
 _vcf_samples() {
+  # Read genotype sample names from the SOMATIC_VCF path already set by the caller.
   local vcf="$1"
   local line=""
   if [[ "$vcf" == *.gz ]]; then
@@ -90,37 +102,13 @@ _vcf_samples() {
   awk -F'\t' '{for (i=10; i<=NF; i++) print $i}' <<<"$line"
 }
 
-_pick_vcf_sample() {
-  # usage: _pick_vcf_sample <role:tumor|normal> <bam> <sample1> <sample2> ...
-  local role="$1"
-  local bam="$2"
-  shift 2
+_pick_vcf_sample_by_bam() {
+  # usage: _pick_vcf_sample_by_bam <bam> <sample1> <sample2> ...
+  local bam="$1"
+  shift
   local samples=("$@")
   [[ ${#samples[@]} -gt 0 ]] || return 1
-
-  local patient_n role_keys=()
-  patient_n="$(_norm_token "${PATIENT_ID}")"
-  case "$role" in
-    tumor) role_keys=(tumor tumour) ;;
-    normal) role_keys=(blood normal germline) ;;
-    *) return 1 ;;
-  esac
-
-  local s sn key
-  # 1) keyword: contains patient AND role token (separator-agnostic)
-  for s in "${samples[@]}"; do
-    sn="$(_norm_token "$s")"
-    [[ "$sn" == *"${patient_n}"* ]] || continue
-    for key in "${role_keys[@]}"; do
-      if [[ "$sn" == *"$key"* ]]; then
-        printf '%s' "$s"
-        return 0
-      fi
-    done
-  done
-
-  # 2) BAM basename / stem appears in sample (or vice versa) — covers FP*_L0*_451 lane IDs
-  local stem stem_n bam_n
+  local stem stem_n bam_n s sn
   stem="$(_bam_stem "$bam")"
   stem_n="$(_norm_token "$stem")"
   bam_n="$(_norm_token "$(basename "$bam")")"
@@ -135,7 +123,53 @@ _pick_vcf_sample() {
       return 0
     fi
   done
+  return 1
+}
 
+_pick_vcf_sample_by_keyword() {
+  # Optional fallback only: patient ID + role token in the VCF column name.
+  # usage: _pick_vcf_sample_by_keyword <role:tumor|normal> <sample1> ...
+  local role="$1"
+  shift
+  local samples=("$@")
+  [[ ${#samples[@]} -gt 0 ]] || return 1
+  local patient_n role_keys=() s sn key
+  patient_n="$(_norm_token "${PATIENT_ID}")"
+  case "$role" in
+    tumor) role_keys=(tumor tumour) ;;
+    normal) role_keys=(blood normal germline) ;;
+    *) return 1 ;;
+  esac
+  for s in "${samples[@]}"; do
+    sn="$(_norm_token "$s")"
+    [[ "$sn" == *"${patient_n}"* ]] || continue
+    for key in "${role_keys[@]}"; do
+      if [[ "$sn" == *"$key"* ]]; then
+        printf '%s' "$s"
+        return 0
+      fi
+    done
+  done
+  return 1
+}
+
+_pick_vcf_sample() {
+  # usage: _pick_vcf_sample <role:tumor|normal> <bam> <sample1> <sample2> ...
+  local role="$1"
+  local bam="$2"
+  shift 2
+  local samples=("$@")
+  local picked
+  # 1) BAM stem (primary)
+  if picked="$(_pick_vcf_sample_by_bam "${bam}" "${samples[@]}")"; then
+    printf '%s' "$picked"
+    return 0
+  fi
+  # 2) keyword fallback (optional)
+  if picked="$(_pick_vcf_sample_by_keyword "${role}" "${samples[@]}")"; then
+    printf '%s' "$picked"
+    return 0
+  fi
   return 1
 }
 
@@ -145,29 +179,36 @@ resolve_purple_sample_ids() {
   local tumor_fallback="${PATIENT_ID}_tumor"
   local normal_fallback="${PATIENT_ID}_blood"
   local -a samples=()
-  local picked
+  local picked how
 
+  # SOMATIC_VCF must already be set from case.config / env — we only parse columns inside it.
   if [[ -n "${SOMATIC_VCF}" && -f "${SOMATIC_VCF}" ]]; then
     mapfile -t samples < <(_vcf_samples "${SOMATIC_VCF}")
   fi
 
   if [[ -n "${tumor_override}" ]]; then
     TUMOR_SAMPLE="${tumor_override}"
+    how="override"
   elif [[ ${#samples[@]} -gt 0 ]] && picked="$(_pick_vcf_sample tumor "${TUMOR_BAM}" "${samples[@]}")"; then
     TUMOR_SAMPLE="${picked}"
-    echo "==> resolved TUMOR_SAMPLE from VCF/BAM keywords: ${TUMOR_SAMPLE}"
+    how="bam-stem-or-keyword"
   else
     TUMOR_SAMPLE="${tumor_fallback}"
+    how="fallback"
   fi
+  echo "==> resolved TUMOR_SAMPLE=${TUMOR_SAMPLE} (${how}; VCF path from case.config SOMATIC_VCF, not filename guess)"
 
   if [[ -n "${normal_override}" ]]; then
     NORMAL_SAMPLE="${normal_override}"
+    how="override"
   elif [[ ${#samples[@]} -gt 0 ]] && picked="$(_pick_vcf_sample normal "${NORMAL_BAM}" "${samples[@]}")"; then
     NORMAL_SAMPLE="${picked}"
-    echo "==> resolved NORMAL_SAMPLE from VCF/BAM keywords: ${NORMAL_SAMPLE}"
+    how="bam-stem-or-keyword"
   else
     NORMAL_SAMPLE="${normal_fallback}"
+    how="fallback"
   fi
+  echo "==> resolved NORMAL_SAMPLE=${NORMAL_SAMPLE} (${how})"
 
   # If AMBER already finished under a different sample name, force pileup redo for consistency with VCF.
   if [[ -f "${DONE_AMBER}" && "${FORCE}" != "1" ]]; then

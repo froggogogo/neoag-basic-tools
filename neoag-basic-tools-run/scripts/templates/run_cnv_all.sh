@@ -205,7 +205,7 @@ pileup_sequenza() {
 pileup_purple() {
   echo "[$(ts)] PURPLE AMBER+COBALT START"
   # Do NOT force PATIENT_ID_tumor — run_purple_steps resolves VCF genotype IDs
-  # by patient+tumor/blood keywords (separator-agnostic) or BAM basename tokens.
+  # (SOMATIC_VCF path from case.config only) via BAM stem first, keyword fallback.
   PATIENT_ID="${PATIENT_ID}" \
   TUMOR_BAM="${TUMOR_BAM}" \
   NORMAL_BAM="${NORMAL_BAM}" \
@@ -331,7 +331,7 @@ fit_purple() {
     return 0
   fi
   echo "[$(ts)] PURPLE fit START"
-  # Sample IDs resolved inside run_purple_steps (VCF keywords / BAM tokens).
+  # Sample IDs resolved inside run_purple_steps (BAM stem first; VCF path from case.config).
   PATIENT_ID="${PATIENT_ID}" \
   TUMOR_BAM="${TUMOR_BAM}" \
   NORMAL_BAM="${NORMAL_BAM}" \
