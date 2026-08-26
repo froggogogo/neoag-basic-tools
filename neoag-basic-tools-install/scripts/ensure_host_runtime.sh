@@ -76,6 +76,46 @@ env_is_broken_fusion() {
   return 0
 }
 
+# pVACseq/MHCflurry must live in neoag-pvactools711 (isolated TF/Keras).
+# A present-but-hollow prefix (e.g. missing pandas) blocks ensure_env_named.
+env_pvactools711_ok() {
+  local envdir="${1:-${CONDA_BASE}/envs/neoag-pvactools711}"
+  local py="${envdir}/bin/python"
+  local pvac="${envdir}/bin/pvacseq"
+  [[ -x "$py" && -x "$pvac" ]] || return 1
+  "$py" -c 'import pandas, mhcflurry' >/dev/null 2>&1 || return 1
+  return 0
+}
+
+ensure_pvactools711() {
+  local envdir="${CONDA_BASE}/envs/neoag-pvactools711"
+  # Always retarget sibling neoag-tools .pth (cheap; required after cross-host unpack)
+  if [[ -d "$envdir" ]]; then
+    fix_pvactools711_tools_pth "$envdir" || true
+    fix_env_bin_shebangs "$envdir" || true
+  fi
+  if env_pvactools711_ok "$envdir"; then
+    ok "neoag-pvactools711 (pandas/mhcflurry) OK"
+    return 0
+  fi
+  warn "neoag-pvactools711 missing or broken — replace from conda-pack (134 gold)"
+  local bak="${envdir}.bak_pre_pvac_$(date +%Y%m%d_%H%M%S)"
+  if [[ -d "$envdir" ]]; then
+    mv -f "$envdir" "$bak"
+    log "backed up broken neoag-pvactools711 -> ${bak}"
+  fi
+  if unpack_conda_pack neoag-pvactools711 && env_pvactools711_ok "$envdir"; then
+    ok "neoag-pvactools711 restored from pack"
+    return 0
+  fi
+  if [[ ! -d "$envdir" && -d "$bak" ]]; then
+    mv -f "$bak" "$envdir"
+    warn "unpack failed; restored ${bak}"
+  fi
+  warn "neoag-pvactools711 still broken after conda-pack"
+  return 1
+}
+
 unpack_conda_pack() {
   local name="$1"
   local dest="${CONDA_BASE}/envs/${name}"
@@ -99,13 +139,56 @@ unpack_conda_pack() {
   esac
   if [[ -x "${dest}/bin/conda-unpack" ]]; then
     # R-only envs (e.g. neoag-ascat) ship without python; use host miniforge python.
-    if ! "${dest}/bin/conda-unpack" 2>/dev/null; then
-      if [[ -x "${CONDA_BASE}/bin/python" ]]; then
-        "${CONDA_BASE}/bin/python" "${dest}/bin/conda-unpack" || true
+    # Prefer explicit interpreter: /usr/bin/env python is often missing on bare hosts.
+    if ! "${CONDA_BASE}/bin/python" "${dest}/bin/conda-unpack" 2>/dev/null; then
+      if ! "${dest}/bin/python" "${dest}/bin/conda-unpack" 2>/dev/null; then
+        "${dest}/bin/conda-unpack" 2>/dev/null || true
       fi
     fi
   fi
+  # neoag-pvactools711 shares pandas/etc via .pth into sibling neoag-tools (134 gold layout).
+  # After cross-host unpack the absolute path still points at the pack source host.
+  if [[ "$name" == "neoag-pvactools711" ]]; then
+    fix_pvactools711_tools_pth "$dest" || true
+    fix_env_bin_shebangs "$dest" || true
+  fi
   ok "unpacked ${name} -> ${dest}"
+}
+
+fix_pvactools711_tools_pth() {
+  local envdir="${1:-${CONDA_BASE}/envs/neoag-pvactools711}"
+  local pth="${envdir}/lib/python3.11/site-packages/neoag_tools_dependencies.pth"
+  local tools_sp="${CONDA_BASE}/envs/neoag-tools/lib/python3.11/site-packages"
+  [[ -f "$pth" ]] || return 0
+  if [[ ! -d "$tools_sp" ]]; then
+    warn "neoag-tools site-packages missing; leave ${pth} unchanged"
+    return 1
+  fi
+  printf '%s\n' "$tools_sp" >"$pth"
+  ok "rewrote neoag_tools_dependencies.pth -> ${tools_sp}"
+}
+
+fix_env_bin_shebangs() {
+  local envdir="$1"
+  local py="${envdir}/bin/python"
+  [[ -x "$py" ]] || return 1
+  local f h n=0
+  shopt -s nullglob
+  for f in "${envdir}/bin/"*; do
+    [[ -f "$f" && -x "$f" ]] || continue
+    # Skip binaries (conda-unpack leaves some ELF next to scripts)
+    grep -Iq . "$f" 2>/dev/null || continue
+    h="$(head -1 "$f" 2>/dev/null || true)"
+    case "$h" in
+      '#!/usr/bin/env python'|'#!/usr/bin/env python3'|'#!/usr/bin/env python3.11'|*/home/na/miniforge3/envs/*/bin/python*)
+        sed -i "1s|.*|#!${py}|" "$f"
+        n=$((n + 1))
+        ;;
+    esac
+  done
+  shopt -u nullglob
+  [[ "$n" -gt 0 ]] && ok "rewrote ${n} bin shebangs in $(basename "$envdir")"
+  return 0
 }
 
 ensure_ascat() {
@@ -367,6 +450,7 @@ main() {
   ensure_salmon_cpp || true
   ensure_spechla_env || true
   ensure_ascat || true
+  ensure_pvactools711 || true
 
   local name
   for name in neoag-tools neoag-fusion neoag-splice neoag-splicemutr neoag-sequenza neoag-vep neoag-gatk neoag-ascat neoag-snaf neoag-optitype neoag-pvactools711; do
@@ -375,6 +459,8 @@ main() {
 
   # Re-check after ensure_env_named (may have left a STAR-only broken fusion)
   ensure_fusion_lohhla_rpkgs || true
+  # ensure_env_named skips existing dirs; re-validate pVAC after the loop
+  ensure_pvactools711 || true
 
   if [[ -x "${DEPS_DIR}/src/neo/scripts/install_optitype.sh" ]] && [[ ! -d "${CONDA_BASE}/envs/neoag-optitype" ]]; then
     log "running install_optitype.sh"

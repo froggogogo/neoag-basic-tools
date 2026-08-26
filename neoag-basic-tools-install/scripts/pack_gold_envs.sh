@@ -52,9 +52,13 @@ log "packing on $(hostname) conda=${CONDA_BASE} -> ${PACK_DIR}"
 for name in "${want[@]}"; do
   [[ -n "$name" ]] || continue
   out="${PACK_DIR}/${name}.tar.gz"
-  if [[ -s "$out" ]]; then
-    ok "already packed: $out"
+  if [[ -s "$out" && "${FORCE:-0}" != "1" ]]; then
+    ok "already packed: $out (FORCE=1 to rebuild)"
     continue
+  fi
+  if [[ -s "$out" && "${FORCE:-0}" == "1" ]]; then
+    mv -f "$out" "${out}.bak_$(date +%Y%m%d_%H%M%S)"
+    log "FORCE: moved stale pack aside for ${name}"
   fi
   tmp="/tmp/neoag_pack_${name}.tar.gz"
   rm -f "$tmp"
