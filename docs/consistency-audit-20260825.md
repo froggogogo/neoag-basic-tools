@@ -23,12 +23,12 @@
 坏脚本「merge raw + `printf '\n'`、无 awk」在染色体交界插入空行 → `seqz_binning` `expected 14, got 1`。  
 金路径：先 per-chrom bin，再 merge，并用 `awk 'NF==0{next} /^chromosome/{if(seen++) next}'`。
 
-## 3. 验证状态（2026-08-25 续跑启动后）
+## 3. 验证状态（2026-08-26 更新）
 
-| 样本 | Sequenza | PURPLE | LOHHLA | SNAF |
-|------|----------|--------|--------|------|
-| jinganxin (66) | **续跑中**（shared 金路径，reuse chrom→bin） | wrapper 已改；等 HMFTOOLS rsync 完成后可重跑 | 脚本可自动写 copyNum；待 Sequenza/确认 ASCAT 后触发 | mhcgnomes Class2Pair **已可 import**；待重跑 |
-| yumin-tumor (134) | **续跑中** | 本机 env 本已可用 | 已完成（历史） | 历史已完成；env 已同步 patch |
+| 样本 | Sequenza | PURPLE | LOHHLA | SNAF | 其它已成功 |
+|------|----------|--------|--------|------|------------|
+| jinganxin (66) | **成功**（`.fit.done` 2026-08-25 17:14） | AMBER/COBALT 成功；fit 曾因 VCF sample≠`*_tumor` 失败（模板已改关键字/BAM 解析） | 失败（66 `neoag-fusion` 缺 `optparse`；已改为从 134 conda-pack 迁移） | 曾 Class2Pair/`mhcflurry` 问题；8/25 resume 有 `.snaf.done` 但 **候选 0 行**；SpliceMutr 未跑 | HLA（OptiType/HLA-LA/SpecHLA/consensus）、FACETS、ASCAT、short-RNA（STAR/Salmon/RSEM/Arriba/EasyFuse/STAR-Fusion/RegTools/evidence） |
+| yumin-tumor (134) | **成功**（`.fit.done` 2026-08-25 18:28） | 成功（历史） | 成功（历史） | 成功（历史） | DNA 下游 + short-RNA + SpliceMutr 主流程成功；cohort antigenicity 单样本标 UNASSESSED（非硬失败） |
 
 ## 4. 遗留风险
 

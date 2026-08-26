@@ -36,8 +36,6 @@ if [[ -n "${CONDA_PREFIX:-}" && "${CONDA_PREFIX}" == *"/HMFTOOLS/.conda" && ! -d
 fi
 
 PATIENT_ID="${PATIENT_ID:?ERROR: set PATIENT_ID}"
-TUMOR_SAMPLE="${TUMOR_SAMPLE_ID:-${PATIENT_ID}_tumor}"
-NORMAL_SAMPLE="${NORMAL_SAMPLE_ID:-${PATIENT_ID}_blood}"
 TUMOR_BAM="${TUMOR_BAM:?ERROR: set TUMOR_BAM}"
 NORMAL_BAM="${NORMAL_BAM:?ERROR: set NORMAL_BAM}"
 SOMATIC_VCF="${SOMATIC_VCF:-}"
@@ -63,8 +61,128 @@ DONE_AMBER="${AMBER_DIR}/.amber.done"
 DONE_COBALT="${COBALT_DIR}/.cobalt.done"
 DONE_FIT="${PURPLE_DIR}/.fit.done"
 
+# --- Sample ID resolution (PURPLE -tumor must match VCF genotype columns) ---
+# Priority: explicit override → VCF keyword (patient+tumor/blood) → BAM basename token → fallback.
+_norm_token() {
+  # lowercase + keep only alnum so jinganxin_tumor / jinganxin-tumor / jinganxin.tumor align
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]'
+}
+
+_bam_stem() {
+  local b
+  b="$(basename "$1")"
+  b="${b%.bam}"
+  b="${b%.cram}"
+  b="${b%.align}"
+  printf '%s' "$b"
+}
+
+_vcf_samples() {
+  local vcf="$1"
+  local line=""
+  if [[ "$vcf" == *.gz ]]; then
+    line="$(gzip -dc "$vcf" 2>/dev/null | awk '/^#CHROM/{print; exit}')"
+  else
+    line="$(awk '/^#CHROM/{print; exit}' "$vcf")"
+  fi
+  [[ -n "$line" ]] || return 0
+  # fields 10+ are sample names
+  awk -F'\t' '{for (i=10; i<=NF; i++) print $i}' <<<"$line"
+}
+
+_pick_vcf_sample() {
+  # usage: _pick_vcf_sample <role:tumor|normal> <bam> <sample1> <sample2> ...
+  local role="$1"
+  local bam="$2"
+  shift 2
+  local samples=("$@")
+  [[ ${#samples[@]} -gt 0 ]] || return 1
+
+  local patient_n role_keys=()
+  patient_n="$(_norm_token "${PATIENT_ID}")"
+  case "$role" in
+    tumor) role_keys=(tumor tumour) ;;
+    normal) role_keys=(blood normal germline) ;;
+    *) return 1 ;;
+  esac
+
+  local s sn key
+  # 1) keyword: contains patient AND role token (separator-agnostic)
+  for s in "${samples[@]}"; do
+    sn="$(_norm_token "$s")"
+    [[ "$sn" == *"${patient_n}"* ]] || continue
+    for key in "${role_keys[@]}"; do
+      if [[ "$sn" == *"$key"* ]]; then
+        printf '%s' "$s"
+        return 0
+      fi
+    done
+  done
+
+  # 2) BAM basename / stem appears in sample (or vice versa) — covers FP*_L0*_451 lane IDs
+  local stem stem_n bam_n
+  stem="$(_bam_stem "$bam")"
+  stem_n="$(_norm_token "$stem")"
+  bam_n="$(_norm_token "$(basename "$bam")")"
+  for s in "${samples[@]}"; do
+    sn="$(_norm_token "$s")"
+    if [[ -n "$stem_n" && ( "$sn" == *"$stem_n"* || "$stem_n" == *"$sn"* ) ]]; then
+      printf '%s' "$s"
+      return 0
+    fi
+    if [[ -n "$bam_n" && "$bam_n" == *"$sn"* ]]; then
+      printf '%s' "$s"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+resolve_purple_sample_ids() {
+  local tumor_override="${TUMOR_SAMPLE_ID:-}"
+  local normal_override="${NORMAL_SAMPLE_ID:-}"
+  local tumor_fallback="${PATIENT_ID}_tumor"
+  local normal_fallback="${PATIENT_ID}_blood"
+  local -a samples=()
+  local picked
+
+  if [[ -n "${SOMATIC_VCF}" && -f "${SOMATIC_VCF}" ]]; then
+    mapfile -t samples < <(_vcf_samples "${SOMATIC_VCF}")
+  fi
+
+  if [[ -n "${tumor_override}" ]]; then
+    TUMOR_SAMPLE="${tumor_override}"
+  elif [[ ${#samples[@]} -gt 0 ]] && picked="$(_pick_vcf_sample tumor "${TUMOR_BAM}" "${samples[@]}")"; then
+    TUMOR_SAMPLE="${picked}"
+    echo "==> resolved TUMOR_SAMPLE from VCF/BAM keywords: ${TUMOR_SAMPLE}"
+  else
+    TUMOR_SAMPLE="${tumor_fallback}"
+  fi
+
+  if [[ -n "${normal_override}" ]]; then
+    NORMAL_SAMPLE="${normal_override}"
+  elif [[ ${#samples[@]} -gt 0 ]] && picked="$(_pick_vcf_sample normal "${NORMAL_BAM}" "${samples[@]}")"; then
+    NORMAL_SAMPLE="${picked}"
+    echo "==> resolved NORMAL_SAMPLE from VCF/BAM keywords: ${NORMAL_SAMPLE}"
+  else
+    NORMAL_SAMPLE="${normal_fallback}"
+  fi
+
+  # If AMBER already finished under a different sample name, force pileup redo for consistency with VCF.
+  if [[ -f "${DONE_AMBER}" && "${FORCE}" != "1" ]]; then
+    if ! compgen -G "${AMBER_DIR}/${NORMAL_SAMPLE}.amber*" >/dev/null 2>&1 \
+      && ! compgen -G "${AMBER_DIR}/${TUMOR_SAMPLE}.amber*" >/dev/null 2>&1; then
+      echo "==> WARN: AMBER done markers exist but outputs do not match resolved samples (${TUMOR_SAMPLE}/${NORMAL_SAMPLE}); clearing AMBER/COBALT done for re-pileup"
+      rm -f "${DONE_AMBER}" "${DONE_COBALT}" "${DONE_FIT}"
+    fi
+  fi
+}
+
 mkdir -p "${AMBER_DIR}" "${COBALT_DIR}" "${PURPLE_DIR}" "$(dirname "${LOG}")"
 exec > >(tee -a "${LOG}") 2>&1
+
+resolve_purple_sample_ids
 
 echo "==> purple_steps $(date -Is) step=${PURPLE_STEP}"
 echo "    tumor=${TUMOR_SAMPLE} bam=${TUMOR_BAM}"

@@ -308,6 +308,46 @@ ensure_mhcflurry_shim() {
   fi
 }
 
+# LOHHLA uses neoag-fusion Rscript. Env may have STAR but miss optparse/data.table (66).
+# Prefer replace-from conda-pack (134 gold) over piecemeal installs.
+env_fusion_lohhla_r_ok() {
+  local envdir="${1:-${CONDA_BASE}/envs/neoag-fusion}"
+  local rscript="${envdir}/bin/Rscript"
+  [[ -x "$rscript" ]] || return 1
+  local pkg
+  for pkg in optparse data.table; do
+    "$rscript" -e "cat(requireNamespace('${pkg}', quietly=TRUE))" 2>/dev/null | grep -q TRUE || return 1
+  done
+  return 0
+}
+
+ensure_fusion_lohhla_rpkgs() {
+  local envdir="${CONDA_BASE}/envs/neoag-fusion"
+  if env_fusion_lohhla_r_ok "$envdir"; then
+    ok "neoag-fusion LOHHLA R (optparse/data.table) OK"
+    return 0
+  fi
+  warn "neoag-fusion missing LOHHLA R deps — replace from conda-pack (134 gold)"
+  local bak="${envdir}.bak_pre_lohhla_$(date +%Y%m%d_%H%M%S)"
+  if [[ -d "$envdir" ]]; then
+    mv -f "$envdir" "$bak"
+    log "backed up broken neoag-fusion -> ${bak}"
+  fi
+  if unpack_conda_pack neoag-fusion && env_fusion_lohhla_r_ok "$envdir"; then
+    ok "neoag-fusion restored from pack with LOHHLA R pkgs"
+    # Keep STAR usable if pack somehow lacks it
+    ensure_star_in_fusion || true
+    return 0
+  fi
+  # Restore backup if unpack failed
+  if [[ ! -d "$envdir" && -d "$bak" ]]; then
+    mv -f "$bak" "$envdir"
+    warn "unpack failed; restored ${bak}"
+  fi
+  warn "neoag-fusion still missing LOHHLA R after conda-pack"
+  return 1
+}
+
 main() {
   install_skill_files_into_deps
   write_site_env
@@ -323,6 +363,7 @@ main() {
 
   ensure_samtools19 || true
   ensure_star_in_fusion || true
+  ensure_fusion_lohhla_rpkgs || true
   ensure_salmon_cpp || true
   ensure_spechla_env || true
   ensure_ascat || true
@@ -331,6 +372,9 @@ main() {
   for name in neoag-tools neoag-fusion neoag-splice neoag-splicemutr neoag-sequenza neoag-vep neoag-gatk neoag-ascat neoag-snaf neoag-optitype neoag-pvactools711; do
     ensure_env_named "$name" || true
   done
+
+  # Re-check after ensure_env_named (may have left a STAR-only broken fusion)
+  ensure_fusion_lohhla_rpkgs || true
 
   if [[ -x "${DEPS_DIR}/src/neo/scripts/install_optitype.sh" ]] && [[ ! -d "${CONDA_BASE}/envs/neoag-optitype" ]]; then
     log "running install_optitype.sh"
@@ -344,6 +388,11 @@ main() {
     ensure_sequenza_datatable || true
   fi
   ensure_mhcflurry_shim || true
+  if declare -F ensure_mhcgnomes_class2pair_compat >/dev/null; then
+    ensure_mhcgnomes_class2pair_compat || true
+  elif declare -F ensure_mhcgnomes_class2pair_shim >/dev/null; then
+    ensure_mhcgnomes_class2pair_shim || true
+  fi
 
   _ips=" $(hostname -I 2>/dev/null || true) "
   if [[ "${_ips}" == *" 10.200.65.66 "* ]]; then

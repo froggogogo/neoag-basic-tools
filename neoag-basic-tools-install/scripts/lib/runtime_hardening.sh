@@ -288,6 +288,57 @@ ensure_netmhcstabpan_dtu() {
   return 0
 }
 
+# mhcflurry imports Class2Pair from mhcgnomes. Some installs omit the re-export or
+# only expose Pair — patch __init__.py so SNAF binding prediction works on any host.
+ensure_mhcgnomes_class2pair_compat() {
+  local py="${CONDA_BASE}/envs/neoag-snaf/bin/python"
+  [[ -x "$py" ]] || return 0
+  if "$py" -c "from mhcgnomes import Class2Pair" >/dev/null 2>&1; then
+    ok "mhcgnomes.Class2Pair import OK"
+    return 0
+  fi
+  log "patching mhcgnomes Class2Pair compatibility for mhcflurry"
+  if ! "$py" - <<'PY'
+import importlib
+from pathlib import Path
+import mhcgnomes
+
+init = Path(mhcgnomes.__file__)
+text = init.read_text(encoding="utf-8")
+marker = "# neoag Class2Pair compat shim"
+if marker not in text:
+    text += (
+        "\n" + marker + "\n"
+        "try:\n"
+        "    from .class2_pair import Class2Pair  # noqa: F401\n"
+        "except Exception:\n"
+        "    try:\n"
+        "        from .pair import Pair as Class2Pair  # noqa: F401\n"
+        "    except Exception:\n"
+        "        pass\n"
+        "if 'Class2Pair' in globals():\n"
+        "    __all__ = list(__all__) + (['Class2Pair'] if 'Class2Pair' not in __all__ else [])\n"
+    )
+    bak = init.with_suffix(init.suffix + ".bak_pre_class2pair")
+    if not bak.exists():
+        bak.write_text(init.read_text(encoding="utf-8"), encoding="utf-8")
+    init.write_text(text, encoding="utf-8")
+importlib.reload(mhcgnomes)
+from mhcgnomes import Class2Pair  # noqa: F401
+print("Class2Pair OK", Class2Pair)
+PY
+  then
+    warn "mhcgnomes Class2Pair shim script failed"
+    return 1
+  fi
+  if "$py" -c "from mhcgnomes import Class2Pair; import mhcflurry" >/dev/null 2>&1; then
+    ok "mhcgnomes Class2Pair compat + mhcflurry OK"
+    return 0
+  fi
+  warn "mhcgnomes Class2Pair still broken after compat patch"
+  return 1
+}
+
 apply_runtime_hardening() {
   ensure_sequenza_r_dynlibs || true
   ensure_sequenza_datatable || true
@@ -295,6 +346,7 @@ apply_runtime_hardening() {
   install_sequenza_runtime_files || true
   maybe_patch_deps_sequenza_fit || true
   ensure_mhcflurry_layout || true
+  ensure_mhcgnomes_class2pair_compat || true
   ensure_bigmhc_predict_py || true
   ensure_netmhcstabpan_dtu || true
 }

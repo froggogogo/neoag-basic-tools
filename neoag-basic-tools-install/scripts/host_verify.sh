@@ -103,10 +103,12 @@ if [[ -x "${E}/neoag-fusion/bin/Rscript" ]]; then
 else
   miss "r:lohhla:Rscript" "neoag-fusion"
 fi
-# SNAF: mhcgnomes.Class2Pair + mhcflurry must import (version alone is not enough).
+# SNAF: mhcflurry needs Class2Pair; accept Pair→Class2Pair shim / re-export.
 if [[ -x "${E}/neoag-snaf/bin/python" ]]; then
   if "${E}/neoag-snaf/bin/python" -c "from mhcgnomes import Class2Pair" >/dev/null 2>&1; then
     ok "py:mhcgnomes.Class2Pair" "neoag-snaf"
+  elif "${E}/neoag-snaf/bin/python" -c "from mhcgnomes import Pair as Class2Pair" >/dev/null 2>&1; then
+    ok "py:mhcgnomes.Pair_as_Class2Pair" "neoag-snaf"
   else
     miss "py:mhcgnomes.Class2Pair" "neoag-snaf"
   fi
