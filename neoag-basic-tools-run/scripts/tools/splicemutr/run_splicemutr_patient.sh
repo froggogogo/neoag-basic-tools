@@ -64,7 +64,11 @@ if [[ -d "${SPLICEMUTR_R_LIBS}" ]]; then
 fi
 CONDA="${CONDA:-${_CONDA_BASE}/bin/conda}"
 ENV="${ENV:-${_CONDA_BASE}/envs/neoag-splicemutr}"
-NETMHCPAN="${NETMHCPAN:-${_DEPS}/licenses/predictors/netMHCpan/netMHCpan}"
+# NetMHCpan tree on neoag_100T. Bare host ELF on 66 aborts (glibc buffer overflow);
+# prefer docker/apptainer wrapper (same as sliding).
+NETMHCPAN_HOME="${NETMHCPAN_HOME:-${_DEPS}/licenses/predictors/netMHCpan}"
+NETMHCPAN="${NETMHCPAN:-${NETMHCPAN_HOME}/netMHCpan}"
+export NEOAG_NETMHCPAN_ENGINE="${NEOAG_NETMHCPAN_ENGINE:-docker}"
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HELPER="${HELPER:-${_SCRIPT_DIR}/prepare_splicemutr_candidates.py}"
 BSGENOME="${BSGENOME:-BSgenome.Hsapiens.UCSC.hg38}"
@@ -72,6 +76,101 @@ SNAF_STAGE0="${SNAF_STAGE0:-frequency_stage0_verbosity1_uid_gene_symbol_coord_me
 CHUNKS="${SPLICEMUTR_CHUNKS:-4}"
 BSGENOME_WAIT_ROUNDS="${BSGENOME_WAIT_ROUNDS:-120}"
 BSGENOME_WAIT_SLEEP="${BSGENOME_WAIT_SLEEP:-30}"
+
+resolve_netmhcpan_wrapper() {
+  local cand
+  for cand in \
+    "${NEOAG_NETMHCPAN_WRAPPER:-}" \
+    "${NEOAG_ROOT:-}/scripts/run_netmhcpan_container.sh" \
+    /root/neo/src/na0707_upload_release/scripts/run_netmhcpan_container.sh \
+    /home/na/project/neoantigen/neoag_event_pipeline_v03_rc/scripts/run_netmhcpan_container.sh
+  do
+    [[ -n "$cand" && -x "$cand" ]] && { printf '%s' "$cand"; return 0; }
+  done
+  return 1
+}
+
+# Run peptide-mode NetMHCpan to XLS. Prefer container wrapper; write xls to short /tmp then mv.
+# Large peptide lists are chunked (default 50000) to avoid OOM/timeouts; XLS rows are concatenated.
+run_netmhcpan_peptide_xls() {
+  local pep="$1" alleles="$2" xls="$3" log="$4"
+  export NETMHCPAN_HOME
+  export NEOAG_CONDA_BASE="${NEOAG_CONDA_BASE:-${_CONDA_BASE}}"
+  local tmp_host="${NEOAG_NETMHCPAN_TMPDIR:-${WORK}/tmp/netmhcpan}"
+  mkdir -p "$tmp_host" "$(dirname "$xls")"
+  export NEOAG_NETMHCPAN_TMPDIR="$tmp_host"
+  local _conda="${NEOAG_CONDA_BASE}"
+  export NEOAG_NETMHCPAN_EXTRA_MOUNTS="${NEOAG_NETMHCPAN_EXTRA_MOUNTS:-/mnt/neoag_100T:/mnt/neoag_100T:ro,${_conda}:${_conda}:ro,/mnt/zzbnew:/mnt/zzbnew:rw,/tmp:/tmp:rw}"
+
+  local wrapper=""
+  wrapper="$(resolve_netmhcpan_wrapper || true)"
+  local engine="${NEOAG_NETMHCPAN_ENGINE:-docker}"
+  local chunk_size="${NEOAG_NETMHCPAN_CHUNK_SIZE:-50000}"
+  local n_pep
+  n_pep="$(wc -l <"$pep" | tr -d ' ')"
+  local chunk_dir
+  chunk_dir="$(mktemp -d /tmp/netmhcpan_chunks_XXXXXX)"
+  : >"$log"
+
+  split_or_copy() {
+    if [[ "$n_pep" -gt "$chunk_size" ]]; then
+      echo "[$(date '+%F %T')] splitting $n_pep peptides into chunks of $chunk_size"
+      split -l "$chunk_size" -d -a 4 --additional-suffix=.pep "$pep" "${chunk_dir}/c_"
+    else
+      cp -f "$pep" "${chunk_dir}/c_0000.pep"
+    fi
+  }
+  split_or_copy
+
+  local part xls_part i=0
+  local parts=()
+  for part in "${chunk_dir}"/c_*.pep; do
+    [[ -s "$part" ]] || continue
+    i=$((i + 1))
+    xls_part="${chunk_dir}/out_$(printf '%04d' "$i").xls"
+    echo "[$(date '+%F %T')] NetMHCpan chunk $i ($(wc -l <"$part" | tr -d ' ') peptides) alleles=$alleles" | tee -a "$log"
+    if [[ -n "$wrapper" && "$engine" != "host" ]]; then
+      echo "[$(date '+%F %T')] via $wrapper (engine=$engine)" | tee -a "$log"
+      if ! "$wrapper" -p "$part" -a "$alleles" -l 9 -xls -xlsfile "$xls_part" >>"$log" 2>&1; then
+        echo "ERROR: NetMHCpan chunk $i failed; see $log" >&2
+        rm -rf "$chunk_dir"
+        return 1
+      fi
+    else
+      echo "[$(date '+%F %T')] via host binary $NETMHCPAN (engine=host)" | tee -a "$log"
+      if ! "$NETMHCPAN" -p "$part" -a "$alleles" -l 9 -xls -xlsfile "$xls_part" >>"$log" 2>&1; then
+        echo "ERROR: NetMHCpan chunk $i failed; see $log" >&2
+        rm -rf "$chunk_dir"
+        return 1
+      fi
+    fi
+    [[ -s "$xls_part" ]] || { echo "ERROR: empty xls for chunk $i" >&2; rm -rf "$chunk_dir"; return 1; }
+    parts+=("$xls_part")
+  done
+
+  if [[ "${#parts[@]}" -eq 0 ]]; then
+    echo "ERROR: no NetMHCpan chunks produced" >&2
+    rm -rf "$chunk_dir"
+    return 1
+  fi
+  if [[ "${#parts[@]}" -eq 1 ]]; then
+    mv -f "${parts[0]}" "$xls"
+  else
+    # Keep header from first chunk; append body lines from the rest.
+    local first="${parts[0]}"
+    local header
+    header="$(head -1 "$first")"
+    {
+      cat "$first"
+      local p
+      for p in "${parts[@]:1}"; do
+        tail -n +2 "$p"
+      done
+    } >"$xls"
+  fi
+  rm -rf "$chunk_dir"
+  [[ -s "$xls" ]] || return 1
+}
 
 require_nonempty() {
   local name="$1" value="$2"
@@ -153,7 +252,8 @@ STAGE0="$SNAF_RESULT/$SNAF_STAGE0"
 test -s "$STATS" || { echo "ERROR: missing SNAF statistics: $STATS" >&2; exit 3; }
 test -s "$STAGE0" || { echo "ERROR: missing SNAF stage0 table: $STAGE0" >&2; exit 3; }
 test -s "$GTF" || { echo "ERROR: missing GTF: $GTF" >&2; exit 3; }
-test -x "$NETMHCPAN" || { echo "ERROR: NetMHCpan not executable: $NETMHCPAN" >&2; exit 3; }
+test -x "${NETMHCPAN_HOME}/Linux_x86_64/bin/netMHCpan-4.2" || test -x "$NETMHCPAN" || resolve_netmhcpan_wrapper >/dev/null \
+  || { echo "ERROR: NetMHCpan binary/wrapper missing under ${NETMHCPAN_HOME}" >&2; exit 3; }
 test -x "$ENV/bin/python" || { echo "ERROR: python missing in ENV: $ENV" >&2; exit 3; }
 test -f "$HELPER" || { echo "ERROR: HELPER not found: $HELPER" >&2; exit 3; }
 test -d "$SPLICEMUTR_HOME/Rscripts" || { echo "ERROR: invalid SPLICEMUTR_HOME: $SPLICEMUTR_HOME" >&2; exit 3; }
@@ -310,8 +410,7 @@ fi
 XLS="$PRESENTATION/netmhcpan_4.2c.xls"
 if [[ ! -s "$XLS" ]]; then
   echo "[$(date '+%F %T')] Running NetMHCpan for $HLAS_RESOLVED"
-  "$NETMHCPAN" -p "$KMERS" -a "$HLAS_RESOLVED" -l 9 -xls -xlsfile "$XLS" \
-    >"$PRESENTATION/netmhcpan.stdout.txt" 2>&1
+  run_netmhcpan_peptide_xls "$KMERS" "$HLAS_RESOLVED" "$XLS" "$PRESENTATION/netmhcpan.stdout.txt"
   test -s "$XLS"
 fi
 
