@@ -288,6 +288,93 @@ ensure_netmhcstabpan_dtu() {
   return 0
 }
 
+# NetMHCpan must live under DEPS_DIR/licenses/predictors/netMHCpan (neoag_100T).
+# Old .wrapper-bin hardcodes /root/neo/licensed_tools (often a zjl symlink) — rewrite portable.
+ensure_netmhcpan_portable() {
+  local home="${DEPS_DIR}/licenses/predictors/netMHCpan"
+  local bin="${home}/Linux_x86_64/bin/netMHCpan-4.2"
+  local wrap_bin="${home}/.wrapper-bin/netMHCpan-4.2"
+  local front="${home}/netMHCpan"
+  if [[ ! -x "$bin" ]]; then
+    warn "NetMHCpan binary missing under ${home} (expected Linux_x86_64/bin/netMHCpan-4.2)"
+    return 1
+  fi
+  ensure_dir "${home}/.wrapper-bin" 775
+  ensure_dir "${home}/tmp" 777
+
+  # Portable frontend: prefer relative BIN + host conda sysroot; never /root/neo/licensed_tools or zjl.
+  cat >"$front" <<'EOF'
+#!/usr/bin/env bash
+# NetMHCpan 4.2 frontend — always under NETMHCPAN_HOME (neoag_100T licenses).
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+export NETMHCPAN_HOME="${NETMHCPAN_HOME:-${ROOT}}"
+PLATFORM_DIR="${NETMHCPAN_HOME}/Linux_$(uname -m)"
+export NETMHCpan="${NETMHCpan:-${PLATFORM_DIR}}"
+export TMPDIR="${NEOAG_NETMHCPAN_TMPDIR:-${NETMHCPAN_HOME}/tmp}"
+mkdir -p "${TMPDIR}"
+
+BIN="${PLATFORM_DIR}/bin/netMHCpan-4.2"
+if [[ ! -x "${BIN}" ]]; then
+  echo "netMHCpan binary not found under ${NETMHCPAN_HOME}" >&2
+  exit 127
+fi
+
+_resolve_conda_base() {
+  if [[ -n "${NEOAG_CONDA_BASE:-}" && -d "${NEOAG_CONDA_BASE}" ]]; then
+    echo "${NEOAG_CONDA_BASE}"
+    return 0
+  fi
+  local cand
+  for cand in /root/neo/envs/miniforge3 /home/na/miniforge3 /root/neo/env_tool/miniforge3; do
+    [[ -d "$cand" ]] && { echo "$cand"; return 0; }
+  done
+  conda info --base 2>/dev/null || true
+}
+CONDA_BASE="$(_resolve_conda_base)"
+SYSROOT="${CONDA_BASE}/envs/neoag-tools/x86_64-conda-linux-gnu/sysroot"
+LD_LINUX="${SYSROOT}/lib64/ld-linux-x86-64.so.2"
+[[ -x "${LD_LINUX}" ]] || LD_LINUX="${SYSROOT}/lib/ld-linux-x86-64.so.2"
+if [[ -n "${CONDA_BASE}" && -x "${LD_LINUX}" ]]; then
+  exec "${LD_LINUX}" --library-path "${SYSROOT}/lib64:${SYSROOT}/lib" "${BIN}" "$@"
+fi
+exec "${BIN}" "$@"
+EOF
+  chmod a+rx "$front"
+
+  # .wrapper-bin may be invoked by older callers; keep it as a thin redirect to frontend.
+  cat >"$wrap_bin" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+exec "$(printf '%q' "$front")" "\$@"
+EOF
+  chmod a+rx "$wrap_bin"
+
+  # Host tools/ symlink: prefer 100T home; never leave a zjl licensed_tools pointer.
+  local _ips=" $(hostname -I 2>/dev/null || true) "
+  local host_tools=""
+  if [[ "${_ips}" == *" 10.200.65.66 "* ]]; then
+    host_tools=/root/neo/envs/tools/netMHCpan
+  elif [[ "${_ips}" == *" 10.200.65.169 "* ]]; then
+    host_tools=/root/neo/env_tool/tools/netMHCpan
+  elif [[ "${_ips}" == *" 10.200.50.134 "* ]]; then
+    host_tools=""
+  fi
+  if [[ -n "$host_tools" ]]; then
+    mkdir -p "$(dirname "$host_tools")"
+    ln -sfn "$home" "$host_tools"
+    ok "host tools/netMHCpan -> ${home}"
+  fi
+
+  if NETMHCPAN_HOME="$home" NEOAG_CONDA_BASE="${NEOAG_CONDA_BASE:-${CONDA_BASE:-}}" \
+       "$front" -h >/dev/null 2>&1; then
+    ok "NetMHCpan portable OK under ${home}"
+    return 0
+  fi
+  warn "NetMHCpan smoke failed under ${home}"
+  return 1
+}
+
 # mhcflurry imports Class2Pair from mhcgnomes. Some installs omit the re-export or
 # only expose Pair — patch __init__.py so SNAF binding prediction works on any host.
 ensure_mhcgnomes_class2pair_compat() {
@@ -349,4 +436,5 @@ apply_runtime_hardening() {
   ensure_mhcgnomes_class2pair_compat || true
   ensure_bigmhc_predict_py || true
   ensure_netmhcstabpan_dtu || true
+  ensure_netmhcpan_portable || true
 }

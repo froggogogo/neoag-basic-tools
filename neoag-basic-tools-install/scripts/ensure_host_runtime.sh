@@ -474,6 +474,9 @@ main() {
     ensure_sequenza_datatable || true
   fi
   ensure_mhcflurry_shim || true
+  if declare -F ensure_netmhcpan_portable >/dev/null; then
+    ensure_netmhcpan_portable || true
+  fi
   if declare -F ensure_mhcgnomes_class2pair_compat >/dev/null; then
     ensure_mhcgnomes_class2pair_compat || true
   elif declare -F ensure_mhcgnomes_class2pair_shim >/dev/null; then
