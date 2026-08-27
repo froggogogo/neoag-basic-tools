@@ -43,9 +43,14 @@ if [[ -x "${_PVAC_BIN}/mhcflurry-predict" ]]; then
   export PATH="${_PVAC_BIN}:${PATH}"
 fi
 unset _PVAC_BIN
-# Host glibc 2.31 cannot run NetMHCpan 4.2c ELF; use docker wrapper (see neoag scripts/)
+# NetMHCpan tree is on neoag_100T. Binary INTERP points at neoag-tools sysroot, so
+# docker must bind-mount that conda prefix (not /root/neo/licensed_tools or zjl).
+export NETMHCPAN_HOME="${NETMHCPAN_HOME:-/mnt/neoag_100T/majiaxin/neoag-basic-tools-install-deps/licenses/predictors/netMHCpan}"
+export NEOAG_NETMHCPAN_BIN="${NEOAG_NETMHCPAN_BIN:-${NETMHCPAN_HOME}/netMHCpan}"
 export NEOAG_NETMHCPAN_ENGINE="${NEOAG_NETMHCPAN_ENGINE:-docker}"
 export NEOAG_NETMHCPAN_TMPDIR="${NEOAG_NETMHCPAN_TMPDIR:-${CASE_ROOT}/tmp/netmhcpan}"
+_conda="${NEOAG_CONDA_BASE:-${CONDA_BASE:-/root/neo/envs/miniforge3}}"
+export NEOAG_NETMHCPAN_EXTRA_MOUNTS="${NEOAG_NETMHCPAN_EXTRA_MOUNTS:-/mnt/neoag_100T:/mnt/neoag_100T:ro,${_conda}:${_conda}:ro,/mnt/zzbnew:/mnt/zzbnew:rw}"
 mkdir -p "${NEOAG_NETMHCPAN_TMPDIR}"
 
 mkdir -p "${OUT}" "${TMPDIR}"

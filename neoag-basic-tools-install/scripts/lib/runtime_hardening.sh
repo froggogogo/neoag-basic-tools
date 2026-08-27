@@ -290,6 +290,7 @@ ensure_netmhcstabpan_dtu() {
 
 # NetMHCpan must live under DEPS_DIR/licenses/predictors/netMHCpan (neoag_100T).
 # Old .wrapper-bin hardcodes /root/neo/licensed_tools (often a zjl symlink) — rewrite portable.
+# Note: the ELF INTERP is neoag-tools sysroot; docker engine must EXTRA_MOUNT that conda prefix.
 ensure_netmhcpan_portable() {
   local home="${DEPS_DIR}/licenses/predictors/netMHCpan"
   local bin="${home}/Linux_x86_64/bin/netMHCpan-4.2"
