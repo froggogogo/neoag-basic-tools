@@ -45,6 +45,24 @@ fi
 export NEOAG_ALTANALYZE_IMAGE="${NEOAG_ALTANALYZE_IMAGE:-frankligy123/altanalyze:0.7.0.1}"
 export NEOAG_SNAF_FORCE_REBIND="${NEOAG_SNAF_FORCE_REBIND:-1}"
 export SKIP_ALTANALYZE="${SKIP_ALTANALYZE:-0}"
+# Prefer NetMHCpan (sunbinbin gold). MHCflurry often lacks models/PATH on intranet hosts.
+if [[ -z "${NEOAG_NETMHCPAN_BIN:-}" ]]; then
+  for cand in \
+    "${CASE_ROOT}/short-rna/snaf/tools/netMHCpan-local" \
+    "${CASE_ROOT}/production_from_results_manifest_"*/tools/netMHCpan-local \
+    "/mnt/zzbnew/peixunban/gl/liup/neodata4git/data/predictors/netMHCpan/netMHCpan"
+  do
+    # shellcheck disable=SC2086
+    for f in ${cand}; do
+      if [[ -x "$f" ]]; then
+        export NEOAG_NETMHCPAN_BIN="$f"
+        break 2
+      fi
+    done
+  done
+fi
+export NEOAG_SNAF_BINDING_METHOD="${NEOAG_SNAF_BINDING_METHOD:-netMHCpan}"
+export NETMHCPAN_HOME="${NETMHCPAN_HOME:-/mnt/zzbnew/peixunban/gl/liup/neodata4git/data/predictors/netMHCpan}"
 
 args=(
   --bam "$BAM"

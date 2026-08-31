@@ -266,8 +266,13 @@ print(
 )
 PY
 
-# Matrix changed: do not resume an old after_prediction.p from the fake-replicate run.
-rm -f "$OUT/after_prediction.p"
+# Only drop pickle when AltAnalyze/matrix was rebuilt. Binding-only resume keeps translated NeoJunctions.
+if [[ "$SKIP_ALTANALYZE" != "1" ]]; then
+  echo "==> rebuilding matrix: removing old after_prediction.p"
+  rm -f "$OUT/after_prediction.p"
+else
+  echo "==> SKIP_ALTANALYZE=1: keep existing after_prediction.p for binding resume"
+fi
 
 export NEOAG_SNAF_OUTDIR="$OUT"
 export NEOAG_SNAF_MATRIX="$SNAF_INPUT"

@@ -154,6 +154,10 @@ def main() -> int:
     hlas = read_hla(hla_file)
     if binding_method.lower() == "netmhcpan" and not netmhcpan:
         raise RuntimeError("NEOAG_NETMHCPAN_BIN is required for SNAF NetMHCpan mode")
+    print(
+        f"SNAF binding_method={binding_method} netmhcpan={netmhcpan} force_rebind={force_rebind}",
+        flush=True,
+    )
     snaf.initialize(
         df=df,
         db_dir=str(db_dir),
@@ -190,9 +194,16 @@ def main() -> int:
         )
         query.run(hlas=[hlas], outdir=str(outdir))
 
-    snaf.JunctionCountMatrixQuery.generate_results(
-        path=str(outdir / "after_prediction.p"), outdir=str(outdir)
-    )
+    try:
+        snaf.JunctionCountMatrixQuery.generate_results(
+            path=str(outdir / "after_prediction.p"), outdir=str(outdir)
+        )
+    except Exception as exc:  # noqa: BLE001 - keep binding outputs if enhance/mygene fails
+        print(
+            f"WARNING: generate_results failed ({type(exc).__name__}: {exc}); "
+            "will still try T_candidates -> snaf_candidates",
+            flush=True,
+        )
     normalize_snaf_coord_tables(outdir)
 
     source = outdir / "T_candidates" / f"T_antigen_candidates_{sample_id}.txt"
